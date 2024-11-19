@@ -111,7 +111,7 @@ async function sendEmail(to: string, santaName: string, recipientName: string) {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `Santa Claus <${process.env.EMAIL_USER}>`,
       to: to,
       subject: "¡Tu asignación de Secret Santa!",
       html: emailTemplate,

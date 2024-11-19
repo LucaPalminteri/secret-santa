@@ -25,6 +25,7 @@ export default function SecretSantaApp() {
   const [listName, setListName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [giftAmount, setGiftAmount] = useState(0);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isAssignmentComplete, setIsAssignmentComplete] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function SecretSantaApp() {
       const parsedData = JSON.parse(savedData);
       setParticipants(parsedData.participants || []);
       setListName(parsedData.listName || "");
+      setGiftAmount(parsedData.giftAmount || 0);
     }
   }, []);
 
@@ -45,9 +47,10 @@ export default function SecretSantaApp() {
       JSON.stringify({
         participants,
         listName,
+        giftAmount,
       })
     );
-  }, [participants, listName]);
+  }, [participants, listName, giftAmount]);
 
   const addParticipant = () => {
     if (name && email) {
@@ -91,7 +94,7 @@ export default function SecretSantaApp() {
   const handleAssign = async () => {
     setIsAssigning(true);
     try {
-      await assignSecretSantas(participants, listName);
+      await assignSecretSantas(participants, listName, giftAmount);
       toast({
         title: "¡Asignación completada!",
         description: "Se han enviado los correos electrónicos a todos los participantes.",
@@ -99,6 +102,7 @@ export default function SecretSantaApp() {
       setIsAssignmentComplete(true);
       setParticipants([]);
       setListName("");
+      setGiftAmount(0);
       localStorage.removeItem("secretSantaData");
     } catch (error) {
       console.log(error);
@@ -114,6 +118,7 @@ export default function SecretSantaApp() {
   const resetApp = () => {
     setParticipants([]);
     setListName("");
+    setGiftAmount(0);
     localStorage.removeItem("secretSantaData");
     setIsAssignmentComplete(false);
   };
@@ -135,17 +140,32 @@ export default function SecretSantaApp() {
               <Snowflake className="absolute bottom-2 right-2 animate-spin-slow" />
             </CardHeader>
             <CardContent className="p-6 relative">
-              <div className="mb-6">
-                <Label htmlFor="listName" className="text-lg font-semibold text-green-700">
-                  Nombre de la lista (opcional)
-                </Label>
-                <Input
-                  id="listName"
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder="Ej: Fiesta de Navidad de la Oficina"
-                  className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="space-y-2 mb-6">
+                  <Label htmlFor="listName" className="text-lg font-semibold text-green-700">
+                    Nombre de la lista
+                  </Label>
+                  <Input
+                    id="listName"
+                    value={listName}
+                    onChange={(e) => setListName(e.target.value)}
+                    placeholder="Ej: Fiesta de Navidad de la Oficina"
+                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div className="space-y-2 mb-6">
+                  <Label htmlFor="giftAmount" className="text-lg font-semibold text-green-700">
+                    Monto del regalo
+                  </Label>
+                  <Input
+                    id="giftAmount"
+                    type="number"
+                    value={giftAmount}
+                    onChange={(e) => setGiftAmount(parseInt(e.target.value))}
+                    placeholder="Ingresa el monto global para todos los regalos"
+                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="space-y-2">
@@ -240,7 +260,7 @@ export default function SecretSantaApp() {
             <CardFooter>
               <Button
                 onClick={handleAssign}
-                disabled={participants.length < 3 || isAssigning}
+                disabled={participants.length < 3 || isAssigning || giftAmount <= 0}
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6 relative"
               >
                 {isAssigning ? (

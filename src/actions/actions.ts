@@ -21,7 +21,8 @@ async function sendEmail(
   santaName: string,
   recipientName: string,
   participants: Participant[],
-  listName?: string
+  listName?: string,
+  giftAmount?: number
 ) {
   const sortedParticipants = participants.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -97,6 +98,21 @@ async function sendEmail(
             : ""
         }
 
+        ${
+          giftAmount
+            ? `
+        <div class="message">
+          <p>Monto del regalo: <strong>$${giftAmount
+            .toLocaleString("es-ES", {
+              style: "currency",
+              currency: "USD",
+            })
+            .replace("US$", "")}</strong></p>
+        </div>
+        `
+            : ""
+        }
+
         <div class="message">
           <p>Has sido asignado como el Secret Santa de:</p>
           <p class="recipient">${recipientName}</p>
@@ -136,7 +152,7 @@ async function sendEmail(
   }
 }
 
-export async function assignSecretSantas(participants: Participant[], listName?: string) {
+export async function assignSecretSantas(participants: Participant[], listName?: string, giftAmount?: number) {
   const shuffled = shuffle(participants);
   const assignments = shuffled.map((participant, index) => ({
     santa: participant,
@@ -144,7 +160,14 @@ export async function assignSecretSantas(participants: Participant[], listName?:
   }));
 
   for (const assignment of assignments) {
-    await sendEmail(assignment.santa.email, assignment.santa.name, assignment.recipient.name, participants, listName);
+    await sendEmail(
+      assignment.santa.email,
+      assignment.santa.name,
+      assignment.recipient.name,
+      participants,
+      listName,
+      giftAmount
+    );
   }
 
   return { success: true };

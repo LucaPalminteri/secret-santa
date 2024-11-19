@@ -27,8 +27,8 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 1. Clone the repository:
 
    ``` bash
-   git clone https://github.com/yourusername/secret-santa-app.git
-   cd secret-santa-app
+   git clone https://github.com/LucaPalminteri/secret-santa.git
+   cd secret-santa
    ```
 
 2. Install dependencies:
@@ -45,23 +45,6 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
    ```
 
    Note: For Gmail, you'll need to use an "App Password". You can generate one in your Google Account settings under Security > 2-Step Verification > App passwords.
-
-4. Update the `next.config.js` file to include these environment variables:
-
-   ```javascript
-   /** @type {import('next').NextConfig} */
-   const nextConfig = {
-     experimental: {
-       serverActions: true,
-     },
-     env: {
-       EMAIL_USER: process.env.EMAIL_USER,
-       EMAIL_PASS: process.env.EMAIL_PASS,
-     },
-   }
-
-   module.exports = nextConfig
-   ```
 
 ## Usage
 

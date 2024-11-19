@@ -22,6 +22,7 @@ interface Participant {
 
 export default function SecretSantaApp() {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [listName, setListName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
@@ -30,15 +31,23 @@ export default function SecretSantaApp() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedParticipants = localStorage.getItem("secretSantaParticipants");
-    if (savedParticipants) {
-      setParticipants(JSON.parse(savedParticipants));
+    const savedData = localStorage.getItem("secretSantaData");
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      setParticipants(parsedData.participants || []);
+      setListName(parsedData.listName || "");
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("secretSantaParticipants", JSON.stringify(participants));
-  }, [participants]);
+    localStorage.setItem(
+      "secretSantaData",
+      JSON.stringify({
+        participants,
+        listName,
+      })
+    );
+  }, [participants, listName]);
 
   const addParticipant = () => {
     if (name && email) {
@@ -82,15 +91,15 @@ export default function SecretSantaApp() {
   const handleAssign = async () => {
     setIsAssigning(true);
     try {
-      await assignSecretSantas(participants);
+      await assignSecretSantas(participants, listName);
       toast({
         title: "¡Asignación completada!",
         description: "Se han enviado los correos electrónicos a todos los participantes.",
       });
       setIsAssignmentComplete(true);
-      // Clear the list after successful assignment
       setParticipants([]);
-      localStorage.removeItem("secretSantaParticipants");
+      setListName("");
+      localStorage.removeItem("secretSantaData");
     } catch (error) {
       console.log(error);
       toast({
@@ -104,7 +113,8 @@ export default function SecretSantaApp() {
 
   const resetApp = () => {
     setParticipants([]);
-    localStorage.removeItem("secretSantaParticipants");
+    setListName("");
+    localStorage.removeItem("secretSantaData");
     setIsAssignmentComplete(false);
   };
 
@@ -125,6 +135,18 @@ export default function SecretSantaApp() {
               <Snowflake className="absolute bottom-2 right-2 animate-spin-slow" />
             </CardHeader>
             <CardContent className="p-6 relative">
+              <div className="mb-6">
+                <Label htmlFor="listName" className="text-lg font-semibold text-green-700">
+                  Nombre de la lista (opcional)
+                </Label>
+                <Input
+                  id="listName"
+                  value={listName}
+                  onChange={(e) => setListName(e.target.value)}
+                  placeholder="Ej: Fiesta de Navidad de la Oficina"
+                  className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-lg font-semibold text-green-700">

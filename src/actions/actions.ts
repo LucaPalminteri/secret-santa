@@ -16,22 +16,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+async function sendEmail(
+  to: string,
+  santaName: string,
+  recipientName: string,
+  participants: Participant[],
+  listName?: string
+) {
+  const sortedParticipants = participants.sort((a, b) => a.name.localeCompare(b.name));
 
-export async function assignSecretSantas(participants: Participant[]) {
-  const shuffled = shuffle(participants);
-  const assignments = shuffled.map((participant, index) => ({
-    santa: participant,
-    recipient: shuffled[(index + 1) % shuffled.length],
-  }));
-
-  for (const assignment of assignments) {
-    await sendEmail(assignment.santa.email, assignment.santa.name, assignment.recipient.name);
-  }
-
-  return { success: true };
-}
-
-async function sendEmail(to: string, santaName: string, recipientName: string) {
   const emailTemplate = `
     <!DOCTYPE html>
     <html lang="es">
@@ -82,17 +75,38 @@ async function sendEmail(to: string, santaName: string, recipientName: string) {
           color: #c41e3a;
           font-size: 24px;
         }
+        .participant-list {
+          columns: 1;
+          list-style-type: none;
+          padding: 0;
+        }
       </style>
     </head>
     <body>
       <div class="container">
         <h1><span class="snowflake">❄️</span> ¡Tu asignación de Secret Santa! <span class="snowflake">❄️</span></h1>
         <p>¡Hola ${santaName}!</p>
+        
+        ${
+          listName
+            ? `
+        <div class="message">
+          <p>Evento: <strong>${listName}</strong></p>
+        </div>
+        `
+            : ""
+        }
+
         <div class="message">
           <p>Has sido asignado como el Secret Santa de:</p>
           <p class="recipient">${recipientName}</p>
         </div>
         <p>Recuerda mantener el secreto y diviértete eligiendo un regalo especial para tu persona asignada. ¡La magia de la Navidad está en dar!</p>
+        
+        <p>Participantes de este año:</p>
+        <ul class="participant-list">
+          ${sortedParticipants.map((participant) => `<li>${participant.name}</li>`).join("")}
+        </ul>
         <p>Algunas ideas para regalos:</p>
         <ul>
           <li>Un libro interesante</li>
@@ -111,7 +125,7 @@ async function sendEmail(to: string, santaName: string, recipientName: string) {
 
   try {
     await transporter.sendMail({
-      from: `Santa Claus <${process.env.EMAIL_USER}>`,
+      from: `"Santa Claus" <${process.env.EMAIL_USER}>`,
       to: to,
       subject: "¡Tu asignación de Secret Santa!",
       html: emailTemplate,
@@ -120,4 +134,18 @@ async function sendEmail(to: string, santaName: string, recipientName: string) {
     console.error("Error sending email:", error);
     throw new Error("Failed to send email");
   }
+}
+
+export async function assignSecretSantas(participants: Participant[], listName?: string) {
+  const shuffled = shuffle(participants);
+  const assignments = shuffled.map((participant, index) => ({
+    santa: participant,
+    recipient: shuffled[(index + 1) % shuffled.length],
+  }));
+
+  for (const assignment of assignments) {
+    await sendEmail(assignment.santa.email, assignment.santa.name, assignment.recipient.name, participants, listName);
+  }
+
+  return { success: true };
 }

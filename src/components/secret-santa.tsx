@@ -52,25 +52,65 @@ export default function SecretSantaApp() {
     );
   }, [participants, listName, giftAmount]);
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const addParticipant = () => {
-    if (name && email) {
-      if (editingId) {
-        setParticipants(participants.map((p) => (p.id === editingId ? { ...p, name, email } : p)));
-        setEditingId(null);
-        toast({
-          title: "Participante actualizado",
-          description: `${name} ha sido actualizado en la lista.`,
-        });
-      } else {
-        setParticipants([...participants, { id: uuidv4(), name, email }]);
-        toast({
-          title: "Participante agregado",
-          description: `${name} ha sido añadido a la lista.`,
-        });
-      }
-      setName("");
-      setEmail("");
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un nombre.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    if (!email.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un correo electrónico.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un correo electrónico válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const duplicateEmail = participants.some((p) => p.email.toLowerCase() === email.toLowerCase());
+    if (duplicateEmail) {
+      toast({
+        title: "Error",
+        description: "Este correo electrónico ya está registrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingId) {
+      setParticipants(participants.map((p) => (p.id === editingId ? { ...p, name, email } : p)));
+      setEditingId(null);
+      toast({
+        title: "Participante actualizado",
+        description: `${name} ha sido actualizado en la lista.`,
+      });
+    } else {
+      setParticipants([...participants, { id: uuidv4(), name, email }]);
+      toast({
+        title: "Participante agregado",
+        description: `${name} ha sido añadido a la lista.`,
+      });
+    }
+    setName("");
+    setEmail("");
   };
 
   const removeParticipant = (id: string) => {
@@ -92,6 +132,15 @@ export default function SecretSantaApp() {
   };
 
   const handleAssign = async () => {
+    if (participants.length < 3) {
+      toast({
+        title: "Error",
+        description: "Se necesitan al menos 3 participantes para realizar el Secret Santa.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAssigning(true);
     try {
       await assignSecretSantas(participants, listName, giftAmount);
@@ -161,7 +210,7 @@ export default function SecretSantaApp() {
                     id="giftAmount"
                     type="number"
                     value={giftAmount}
-                    onChange={(e) => setGiftAmount(parseInt(e.target.value))}
+                    onChange={(e) => setGiftAmount(parseInt(e.target.value ?? "0") ?? 0)}
                     placeholder="Ingresa el monto global para todos los regalos"
                     className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
                   />

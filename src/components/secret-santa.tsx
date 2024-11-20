@@ -22,12 +22,12 @@ interface Participant {
 
 export default function SecretSantaApp() {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [listName, setListName] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [giftAmount, setGiftAmount] = useState(0);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [isAssignmentComplete, setIsAssignmentComplete] = useState(false);
+  const [listName, setListName] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [giftAmount, setGiftAmount] = useState<number | undefined>(undefined);
+  const [isAssigning, setIsAssigning] = useState<boolean>(false);
+  const [isAssignmentComplete, setIsAssignmentComplete] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -37,7 +37,7 @@ export default function SecretSantaApp() {
       const parsedData = JSON.parse(savedData);
       setParticipants(parsedData.participants || []);
       setListName(parsedData.listName || "");
-      setGiftAmount(parsedData.giftAmount || 0);
+      setGiftAmount(parsedData.giftAmount || undefined);
     }
   }, []);
 
@@ -172,12 +172,17 @@ export default function SecretSantaApp() {
     setIsAssignmentComplete(false);
   };
 
+  const handleGiftAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGiftAmount(value ? parseInt(value) : undefined);
+  };
+
   return (
     <>
       {isAssignmentComplete ? (
         <SecretSantaConfirmation onReset={resetApp} />
       ) : (
-        <div className="min-h-screen bg-gradient-to-b from-red-100 to-green-100 p-4 flex items-center justify-center">
+        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-4 flex items-center justify-center">
           <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-red-500 relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('/snowflakes.svg')] opacity-10 pointer-events-none" />
             <CardHeader className="bg-red-500 text-white relative">
@@ -190,7 +195,7 @@ export default function SecretSantaApp() {
             </CardHeader>
             <CardContent className="p-6 relative">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2">
                   <Label htmlFor="listName" className="text-lg font-semibold text-green-700">
                     Nombre de la lista
                   </Label>
@@ -202,15 +207,15 @@ export default function SecretSantaApp() {
                     className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
                   />
                 </div>
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2">
                   <Label htmlFor="giftAmount" className="text-lg font-semibold text-green-700">
                     Monto del regalo
                   </Label>
                   <Input
                     id="giftAmount"
                     type="number"
-                    value={giftAmount}
-                    onChange={(e) => setGiftAmount(parseInt(e.target.value ?? "0") ?? 0)}
+                    value={giftAmount !== undefined ? giftAmount : ""}
+                    onChange={handleGiftAmountChange}
                     placeholder="Ingresa el monto global para todos los regalos"
                     className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
                   />
@@ -309,7 +314,7 @@ export default function SecretSantaApp() {
             <CardFooter>
               <Button
                 onClick={handleAssign}
-                disabled={participants.length < 3 || isAssigning || giftAmount <= 0}
+                disabled={participants.length < 3 || isAssigning}
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6 relative"
               >
                 {isAssigning ? (

@@ -46,6 +46,8 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
    Note: For Gmail, you'll need to use an "App Password". You can generate one in your Google Account settings under Security > 2-Step Verification > App passwords.
 
+   <https://knowledge.workspace.google.com/kb/how-to-create-app-passwords-000009237>
+
 ## Usage
 
 1. Start the development server:

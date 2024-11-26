@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { assignSecretSantas } from "@/actions/actions";
 import { Spinner } from "./spinner";
 import { SecretSantaConfirmation } from "./confirmation";
+import { validateEmail } from "@/utils/utils";
 
 interface Participant {
   id: string;
@@ -51,11 +52,6 @@ export default function SecretSantaApp() {
       })
     );
   }, [participants, listName, giftAmount]);
-
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
 
   const addParticipant = () => {
     if (!name.trim()) {

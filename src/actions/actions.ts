@@ -2,6 +2,7 @@
 
 import nodemailer from "nodemailer";
 import { shuffle } from "lodash";
+import dns from "dns/promises";
 
 interface Participant {
   id: string;
@@ -16,6 +17,18 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+async function validateEmail(email: string): Promise<boolean> {
+  const domain = email.split("@")[1];
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    return mxRecords.length > 0;
+  } catch (error) {
+    console.error(`Failed to validate email domain for ${email}:`, error);
+    return false;
+  }
+}
+
 async function sendEmail(
   to: string,
   santaName: string,
@@ -160,6 +173,15 @@ export async function assignSecretSantas(participants: Participant[], listName?:
   }));
 
   for (const assignment of assignments) {
+    const isValidEmail = await validateEmail(assignment.santa.email);
+    if (!isValidEmail) {
+      console.log(`Invalid email: ${assignment.santa.email}`);
+      console.error(`Invalid email: ${assignment.santa.email}`);
+      continue;
+    }
+
+    console.log(`Sending email to ${assignment.santa.email}`);
+
     await sendEmail(
       assignment.santa.email,
       assignment.santa.name,

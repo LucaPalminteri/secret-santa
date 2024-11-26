@@ -17,6 +17,26 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Secret Santa",
   description: "A simple Secret Santa app built with Next.js",
+  openGraph: {
+    title: "Secret Santa",
+    description: "A simple Secret Santa app built with Next.js",
+    url: "https://secret-santa-blue-six.vercel.app",
+    type: "website",
+    images: [
+      {
+        url: "https://secret-santa-blue-six.vercel.app/santa.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Secret Santa app preview image",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Secret Santa",
+    description: "A simple Secret Santa app built with Next.js",
+    images: ["https://secret-santa-blue-six.vercel.app/santa.jpg"],
+  },
 };
 
 export default function RootLayout({

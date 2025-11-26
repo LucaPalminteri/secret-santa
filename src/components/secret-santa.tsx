@@ -276,15 +276,9 @@ export default function SecretSantaApp() {
                     >
                       Empezar ahora
                     </Button>
-                    <Link
-                      href="/help"
-                      className="cta-btn-ghost w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm text-muted-foreground opacity-90 hover:opacity-100 hover:bg-transparent mt-4"
-                      aria-label="Cómo funciona (ayuda)"
-                    >
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      <span>Cómo funciona</span>
-                    </Link>
                   </div>
+
+                  {/* helper link moved to bottom of screen */}
                 </div>
               </div>
             </div>
@@ -543,6 +537,23 @@ export default function SecretSantaApp() {
               </div>
             </div>
           </Modal>
+
+          {/* Fixed bottom help link (animated with CTA) */}
+          <div
+            className={`fixed left-0 right-0 bottom-4 flex justify-center z-40 transition-all duration-400 ease-out ${
+              ctaVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
+            }`}
+            style={{ transitionDelay: ctaVisible ? "880ms" : "0ms" }}
+          >
+            <Link
+              href="/help"
+              aria-label="Cómo funciona (ayuda)"
+              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
+            >
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              <span>Cómo funciona</span>
+            </Link>
+          </div>
         </div>
       )}
     </>

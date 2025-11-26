@@ -1,25 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// using simpler panel style for summary — card primitives not needed here
+// table UI not used in minimalist list
 import { Toaster } from "@/components/ui/toaster";
-import { Gift, UserPlus, Send, Snowflake, Pencil, Trash2 } from "lucide-react";
+import { Gift, Pencil, Trash2, Plus, UserPlus, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { assignSecretSantas } from "@/actions/actions";
 import { Spinner } from "./spinner";
-import { SecretSantaConfirmation } from "./confirmation";
 import { validateEmail } from "@/utils/utils";
-
-interface Participant {
-  id: string;
-  name: string;
-  email: string;
-}
+import { loadSecretSantaData, saveSecretSantaData, clearSecretSantaData } from "@/utils/storage";
+import { Participant } from "@/utils/types";
+import StepFlow from "./step-flow";
+import Modal from "./modal";
+import AssignLoading from "./assign-loading";
 
 export default function SecretSantaApp() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -28,29 +26,35 @@ export default function SecretSantaApp() {
   const [email, setEmail] = useState<string>("");
   const [giftAmount, setGiftAmount] = useState<number | undefined>(undefined);
   const [isAssigning, setIsAssigning] = useState<boolean>(false);
-  const [isAssignmentComplete, setIsAssignmentComplete] = useState<boolean>(false);
+  const [assignStatus, setAssignStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [assignDuration, setAssignDuration] = useState<number>(3000);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [flowStarted, setFlowStarted] = useState<boolean>(false);
+  const [flowComplete, setFlowComplete] = useState<boolean>(false);
+  const [ctaVisible, setCtaVisible] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedData = localStorage.getItem("secretSantaData");
+    const savedData = loadSecretSantaData();
     if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      setParticipants(parsedData.participants || []);
-      setListName(parsedData.listName || "");
-      setGiftAmount(parsedData.giftAmount || undefined);
+      setParticipants(savedData.participants || []);
+      setListName(savedData.listName || "");
+      setGiftAmount(savedData.giftAmount ?? undefined);
+      // if savedData already has basic config, consider flow completed
+      if (savedData.listName || savedData.giftAmount !== undefined) {
+        setFlowComplete(true);
+      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(
-      "secretSantaData",
-      JSON.stringify({
-        participants,
-        listName,
-        giftAmount,
-      })
-    );
+    // small delay to trigger the CTA mount animation
+    const t = setTimeout(() => setCtaVisible(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    saveSecretSantaData({ participants, listName, giftAmount });
   }, [participants, listName, giftAmount]);
 
   const addParticipant = () => {
@@ -124,6 +128,7 @@ export default function SecretSantaApp() {
       setEditingId(id);
       setName(participant.name);
       setEmail(participant.email);
+      setShowAddParticipant(true);
     }
   };
 
@@ -137,18 +142,24 @@ export default function SecretSantaApp() {
       return;
     }
 
+    // Show festive loading overlay and ensure a small intentional delay
+    const duration = 3000 + Math.floor(Math.random() * 2001); // 3s - 5s randomized
+    setAssignDuration(duration);
+    setAssignStatus("loading");
     setIsAssigning(true);
+    const minDelay = duration;
+
     try {
-      await assignSecretSantas(participants, listName, giftAmount);
-      toast({
-        title: "¡Asignación completada!",
-        description: "Se han enviado los correos electrónicos a todos los participantes.",
-      });
-      setIsAssignmentComplete(true);
+      // run assignment and minimum delay in parallel
+      await Promise.all([assignSecretSantas(participants, listName, giftAmount), new Promise((r) => setTimeout(r, minDelay))]);
+
+      // Assignment UI now shows a full-screen success state; toast here is redundant and removed.
+      // clear local data and show success state in the single AssignLoading component
       setParticipants([]);
       setListName("");
       setGiftAmount(0);
-      localStorage.removeItem("secretSantaData");
+      clearSecretSantaData();
+      setAssignStatus("success");
     } catch (error) {
       console.log(error);
       toast({
@@ -156,181 +167,376 @@ export default function SecretSantaApp() {
         description: "Hubo un problema al asignar los Secret Santas. Por favor, inténtalo de nuevo.",
         variant: "destructive",
       });
+      setAssignStatus("error");
     }
+
     setIsAssigning(false);
   };
+
+  // loading overlay messages
+  const assignMessages = [
+    "Se están barajando los nombres...",
+    "Preparando los sobres virtuales...",
+    "Mirando la lista dos veces...",
+    "¡Casi listo! Enviando notificaciones...",
+  ];
 
   const resetApp = () => {
     setParticipants([]);
     setListName("");
     setGiftAmount(0);
-    localStorage.removeItem("secretSantaData");
-    setIsAssignmentComplete(false);
+    clearSecretSantaData();
+    setFlowStarted(false);
+    setFlowComplete(false);
   };
 
-  const handleGiftAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setGiftAmount(value ? parseInt(value) : undefined);
-  };
+  // local UI state for minimalist cards + modal
+  const [showEditList, setShowEditList] = useState<boolean>(false);
+  const [listNameDraft, setListNameDraft] = useState<string>(listName);
+  const [giftAmountDraft, setGiftAmountDraft] = useState<number | string>(giftAmount ?? "");
+  const [showAddParticipant, setShowAddParticipant] = useState<boolean>(false);
+  const nameRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setListNameDraft(listName);
+    setGiftAmountDraft(giftAmount ?? "");
+  }, [flowComplete, listName, giftAmount]);
+
+  useEffect(() => {
+    if (showAddParticipant || showEditList) {
+      // small delay to ensure modal mounts
+      setTimeout(() => nameRef.current?.focus(), 50);
+    }
+  }, [showAddParticipant, showEditList]);
 
   return (
     <>
-      {isAssignmentComplete ? (
-        <SecretSantaConfirmation onReset={resetApp} />
+      <Toaster />
+      {assignStatus !== "idle" ? (
+        <AssignLoading
+          open={true}
+          messages={assignMessages}
+          fullScreen
+          status={assignStatus}
+          duration={assignDuration}
+          onDone={() => {
+            // when user dismisses the success/error screen, reset state and return to main view
+            setAssignStatus("idle");
+            resetApp();
+          }}
+        />
       ) : (
-        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-4 flex items-center justify-center">
-          <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-red-500 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/snowflakes.svg')] opacity-10 pointer-events-none" />
-            <CardHeader className="bg-red-500 text-white relative">
-              <CardTitle className="text-3xl font-bold text-center flex items-center justify-center">
-                <Gift className="mr-2" />
-                Secret Santa
-              </CardTitle>
-              <Snowflake className="absolute top-2 left-2 animate-spin-slow" />
-              <Snowflake className="absolute bottom-2 right-2 animate-spin-slow" />
-            </CardHeader>
-            <CardContent className="p-6 relative">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2">
-                  <Label htmlFor="listName" className="text-lg font-semibold text-green-700">
-                    Nombre de la lista
-                  </Label>
-                  <Input
-                    id="listName"
-                    value={listName}
-                    onChange={(e) => setListName(e.target.value)}
-                    placeholder="Ej: Fiesta de Navidad de la Oficina"
-                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="giftAmount" className="text-lg font-semibold text-green-700">
-                    Monto del regalo
-                  </Label>
-                  <Input
-                    id="giftAmount"
-                    type="number"
-                    value={giftAmount !== undefined ? giftAmount : ""}
-                    onChange={handleGiftAmountChange}
-                    placeholder="Ingresa el monto global para todos los regalos"
-                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-lg font-semibold text-green-700">
-                    Nombre
-                  </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ingresa un nombre"
-                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-lg font-semibold text-green-700">
-                    Correo electrónico
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Ingresa un correo electrónico"
-                    className="border-2 border-green-500 focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              </div>
-              <Button onClick={addParticipant} className="w-full bg-green-600 hover:bg-green-700 text-white mb-6">
-                {editingId ? (
-                  <>
-                    <Pencil className="mr-2" />
-                    Actualizar Participante
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="mr-2" />
-                    Agregar Participante
-                  </>
-                )}
-              </Button>
-
-              {participants.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="font-semibold text-xl mb-2 text-red-700">Participantes:</h3>
-                  <div className="border-2 border-green-500 rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">#</TableHead>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Correo electrónico</TableHead>
-                          <TableHead className="w-[100px]">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {participants.map((p, index) => (
-                          <TableRow key={p.id}>
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell>{p.name}</TableCell>
-                            <TableCell>{p.email}</TableCell>
-                            <TableCell>
-                              <div className="flex space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditParticipant(p.id)}
-                                  className="text-blue-500 hover:text-blue-700"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  <span className="sr-only">Editar participante</span>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeParticipant(p.id)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Eliminar participante</span>
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-2 sm:p-4 flex flex-col items-center justify-center gap-6">
+          <div className="relative w-full max-w-[720px] mx-auto h-auto px-1">
+            {/* CTA (overlays with StepFlow) */}
+            <div
+              className={`absolute inset-0 flex items-center justify-center
+                ${
+                  flowStarted || flowComplete
+                    ? "opacity-0 pointer-events-none cta-exit"
+                    : ctaVisible
+                    ? "opacity-100 translate-y-0 cta-entrance"
+                    : "opacity-0 translate-y-4"
+                }`}
+            >
+              <div
+                className="relative w-full px-4 py-10 text-center"
+                style={
+                  {
+                    // custom stagger timings for CTA micro-animations
+                    // title, subtitle, buttons, and blob can be tuned here
+                    "--cta-title-delay": "180ms",
+                    "--cta-sub-delay": "340ms",
+                    "--cta-buttons-delay": "540ms",
+                    "--cta-btn-primary-delay": "700ms",
+                    "--cta-btn-ghost-delay": "820ms",
+                    "--cta-blob-delay": "60ms",
+                  } as React.CSSProperties
+                }
+              >
+                {/* decorative blob */}
+                <div
+                  className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/3 w-[min(60vw,380px)] h-[min(60vw,380px)] rounded-full bg-gradient-to-r from-pink-300 to-amber-200 opacity-30 blur-2xl pointer-events-none ${
+                    ctaVisible ? "cta-blob" : ""
+                  }`}
+                  aria-hidden
+                />
+                <div className="relative z-10">
+                  <h1 className={`text-3xl sm:text-4xl font-extrabold mb-3 ${ctaVisible ? "cta-title" : "opacity-0"}`}>Secret Santa</h1>
+                  <p className={`text-sm sm:text-base mb-6 max-w-lg mx-auto text-muted-foreground ${ctaVisible ? "cta-sub" : "opacity-0"}`}>
+                    Organiza intercambios con un flujo limpio y guiado. Empieza en segundos desde tu móvil.
+                  </p>
+                  <div className={`flex flex-col sm:flex-row items-center justify-center ${ctaVisible ? "cta-buttons" : "opacity-0"} gap-3`}>
+                    <Button
+                      onClick={() => setFlowStarted(true)}
+                      className="cta-btn-primary w-full sm:w-auto px-6 py-3 text-base sm:text-lg transform transition-all duration-300 hover:scale-105 bg-gradient-to-r from-red-500 to-pink-500 text-white"
+                    >
+                      Empezar ahora
+                    </Button>
+                    <Button variant="ghost" onClick={() => setFlowStarted(true)} className="cta-btn-ghost w-full sm:w-auto">
+                      Cómo funciona
+                    </Button>
                   </div>
                 </div>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button
-                onClick={handleAssign}
-                disabled={participants.length < 3 || isAssigning}
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6 relative"
-              >
-                {isAssigning ? (
-                  <>
-                    <Spinner className="mr-2" />
-                    Asignando...
-                  </>
+              </div>
+            </div>
+
+            {/* StepFlow overlay */}
+            <div
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                flowStarted && !flowComplete ? "opacity-100 z-20" : "opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="w-full h-full flex items-center justify-center px-1 sm:px-2 py-3">
+                <div className="w-full">
+                  <StepFlow
+                    initialName={listName}
+                    initialAmount={giftAmount}
+                    onCancel={() => {
+                      setFlowStarted(false);
+                    }}
+                    onComplete={(name, amount) => {
+                      setListName(name);
+                      setGiftAmount(amount ?? undefined);
+                      setFlowComplete(true);
+                      setFlowStarted(false);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          {flowComplete && (
+            <div className="w-full max-w-2xl mx-auto p-2 space-y-4">
+              {/* Card: List info (minimal) */}
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                    <Gift />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-lg font-semibold truncate">{listName || "Sin nombre de lista"}</div>
+                    <div className="text-xs text-muted-foreground">{giftAmount ? `Presupuesto: $${giftAmount}` : "Sin presupuesto definido"}</div>
+                  </div>
+                </div>
+                <div>
+                  <Button variant="ghost" onClick={() => setShowEditList((s) => !s)} title="Editar lista">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* list editing moved to modal */}
+
+              {/* Card: Participants */}
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                {participants.length > 0 ? (
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium">Participantes</div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" onClick={() => setShowAddParticipant((s) => !s)} title="Agregar participante">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* modal will handle composer and list editing */}
+
+                {participants.length === 0 && !showAddParticipant ? (
+                  <div className="flex flex-col items-center py-8 gap-3 text-muted-foreground">
+                    <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                      <UserPlus className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm font-medium">No hay participantes</div>
+                    <Button
+                      onClick={() => setShowAddParticipant(true)}
+                      variant="ghost"
+                      className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
+                      aria-label="Agregar participante"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 ) : (
-                  <>
-                    <Send className="mr-2" />
-                    Asignar Secret Santas
-                  </>
+                  <ul className="space-y-2">
+                    {participants.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between p-2 rounded-md border border-gray-100">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-700">
+                            {p.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">{p.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" onClick={() => removeParticipant(p.id)}>
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </Button>
-            </CardFooter>
-          </Card>
-          <Toaster />
+              </div>
+
+              {/* Card: Finalize (minimal) */}
+              <div className="bg-white/95 rounded-xl shadow-sm p-4">
+                <div className="text-center">
+                  <Button
+                    onClick={handleAssign}
+                    disabled={participants.length < 3 || isAssigning}
+                    className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md disabled:opacity-60"
+                    aria-label="Asignar Secret Santas"
+                  >
+                    {isAssigning ? (
+                      <>
+                        <Spinner className="h-5 w-5" />
+                        <span>Asignando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="h-5 w-5" />
+                        <span>Asignar Secret Santas</span>
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="mt-2 text-xs text-muted-foreground">Se necesitan al menos 3 participantes para asignar.</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Modals */}
+          <Modal
+            open={showAddParticipant}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowAddParticipant(false);
+                setEditingId(null);
+                setName("");
+                setEmail("");
+              } else {
+                setShowAddParticipant(true);
+              }
+            }}
+            title={editingId ? "Editar participante" : "Agregar participante"}
+            description={editingId ? "Actualiza el participante." : "Agregar un nuevo participante a la lista."}
+            footer={
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddParticipant(false);
+                    setEditingId(null);
+                    setName("");
+                    setEmail("");
+                  }}
+                  className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
+                  aria-label="Cancelar"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Cancelar</span>
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    addParticipant();
+                    setShowAddParticipant(false);
+                  }}
+                  className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
+                  aria-label={editingId ? "Guardar" : "Agregar"}
+                >
+                  {editingId ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                  <span className="sr-only">{editingId ? "Guardar" : "Agregar"}</span>
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="modal-name">Nombre</Label>
+                <Input ref={nameRef} id="modal-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
+              </div>
+              <div>
+                <Label htmlFor="modal-email">Email</Label>
+                <Input id="modal-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            open={showEditList}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowEditList(false);
+                setListNameDraft(listName);
+                setGiftAmountDraft(giftAmount ?? "");
+              } else {
+                setShowEditList(true);
+              }
+            }}
+            title="Editar lista"
+            description="Cambia el nombre de la lista y el monto orientativo."
+            footer={
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditList(false);
+                    setListNameDraft(listName);
+                    setGiftAmountDraft(giftAmount ?? "");
+                  }}
+                  className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
+                  aria-label="Cancelar"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Cancelar</span>
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setListName(listNameDraft.trim());
+                    setGiftAmount(giftAmountDraft === "" ? undefined : Number(giftAmountDraft));
+                    setShowEditList(false);
+                  }}
+                  className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
+                  aria-label="Guardar"
+                >
+                  <Check className="h-5 w-5" />
+                  <span className="sr-only">Guardar</span>
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="modal-list-name">Nombre de lista</Label>
+                <Input id="modal-list-name" value={listNameDraft} onChange={(e) => setListNameDraft(e.target.value)} placeholder="Ej: Oficina 2025" />
+              </div>
+              <div>
+                <Label htmlFor="modal-list-amount">Monto</Label>
+                <Input
+                  id="modal-list-amount"
+                  type="number"
+                  value={giftAmountDraft}
+                  onChange={(e) => setGiftAmountDraft(e.target.value)}
+                  placeholder="Ej: 20"
+                />
+              </div>
+            </div>
+          </Modal>
         </div>
       )}
-      <Toaster />
     </>
   );
 }

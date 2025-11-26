@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 // using simpler panel style for summary — card primitives not needed here
 // table UI not used in minimalist list
 import { Toaster } from "@/components/ui/toaster";
-import { Gift, Pencil, Trash2, Plus, UserPlus, X, Check } from "lucide-react";
+import { Gift, Pencil, Trash2, Plus, UserPlus, X, Check, HelpCircle } from "lucide-react";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { assignSecretSantas } from "@/actions/actions";
 import { Spinner } from "./spinner";
@@ -154,11 +155,11 @@ export default function SecretSantaApp() {
       await Promise.all([assignSecretSantas(participants, listName, giftAmount), new Promise((r) => setTimeout(r, minDelay))]);
 
       // Assignment UI now shows a full-screen success state; toast here is redundant and removed.
-      // clear local data and show success state in the single AssignLoading component
+      // clear in-memory state and show success state in the single AssignLoading component
+      // persist/localStorage will be cleared when the user dismisses the success screen
       setParticipants([]);
       setListName("");
       setGiftAmount(0);
-      clearSecretSantaData();
       setAssignStatus("success");
     } catch (error) {
       console.log(error);
@@ -185,7 +186,6 @@ export default function SecretSantaApp() {
     setParticipants([]);
     setListName("");
     setGiftAmount(0);
-    clearSecretSantaData();
     setFlowStarted(false);
     setFlowComplete(false);
   };
@@ -220,7 +220,10 @@ export default function SecretSantaApp() {
           status={assignStatus}
           duration={assignDuration}
           onDone={() => {
-            // when user dismisses the success/error screen, reset state and return to main view
+            // when user dismisses the success/error screen, if it was successful clear storage
+            if (assignStatus === "success") {
+              clearSecretSantaData();
+            }
             setAssignStatus("idle");
             resetApp();
           }}
@@ -266,16 +269,21 @@ export default function SecretSantaApp() {
                   <p className={`text-sm sm:text-base mb-6 max-w-lg mx-auto text-muted-foreground ${ctaVisible ? "cta-sub" : "opacity-0"}`}>
                     Organiza intercambios con un flujo limpio y guiado. Empieza en segundos desde tu móvil.
                   </p>
-                  <div className={`flex flex-col sm:flex-row items-center justify-center ${ctaVisible ? "cta-buttons" : "opacity-0"} gap-3`}>
+                  <div className={`flex flex-col sm:flex-row items-center justify-center ${ctaVisible ? "cta-buttons" : "opacity-0"} gap-3 sm:gap-5`}>
                     <Button
                       onClick={() => setFlowStarted(true)}
                       className="cta-btn-primary w-full sm:w-auto px-6 py-3 text-base sm:text-lg transform transition-all duration-300 hover:scale-105 bg-gradient-to-r from-red-500 to-pink-500 text-white"
                     >
                       Empezar ahora
                     </Button>
-                    <Button variant="ghost" onClick={() => setFlowStarted(true)} className="cta-btn-ghost w-full sm:w-auto">
-                      Cómo funciona
-                    </Button>
+                    <Link
+                      href="/help"
+                      className="cta-btn-ghost w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm text-muted-foreground opacity-90 hover:opacity-100 hover:bg-transparent mt-4"
+                      aria-label="Cómo funciona (ayuda)"
+                    >
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      <span>Cómo funciona</span>
+                    </Link>
                   </div>
                 </div>
               </div>

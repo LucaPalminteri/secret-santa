@@ -29,134 +29,92 @@ async function validateEmail(email: string): Promise<boolean> {
   }
 }
 
-async function sendEmail(
-  to: string,
-  santaName: string,
-  recipientName: string,
-  participants: Participant[],
-  listName?: string,
-  giftAmount?: number
-) {
+async function sendEmail(to: string, santaName: string, recipientName: string, participants: Participant[], listName?: string, giftAmount?: number) {
   const sortedParticipants = participants.sort((a, b) => a.name.localeCompare(b.name));
+  const SITE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || "";
 
-  const emailTemplate = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Tu asignación de Secret Santa</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          background-color: #f0f0f0;
-        }
-        .container {
-          background-color: #ffffff;
-          border-radius: 10px;
-          padding: 30px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-          color: #c41e3a;
-          text-align: center;
-          font-size: 28px;
-          margin-bottom: 20px;
-        }
-        .message {
-          background-color: #f8f8f8;
-          border-left: 5px solid #c41e3a;
-          padding: 15px;
-          margin-bottom: 20px;
-        }
-        .recipient {
-          font-weight: bold;
-          color: #006400;
-          font-size: 18px;
-        }
-        .footer {
-          text-align: center;
-          margin-top: 30px;
-          font-size: 14px;
-          color: #666;
-        }
-        .snowflake {
-          color: #c41e3a;
-          font-size: 24px;
-        }
-        .participant-list {
-          columns: 1;
-          list-style-type: none;
-          padding: 0;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1><span class="snowflake">❄️</span> ¡Tu asignación de Secret Santa! <span class="snowflake">❄️</span></h1>
-        <p>¡Hola ${santaName}!</p>
-        
-        ${
-          listName
-            ? `
-        <div class="message">
-          <p>Evento: <strong>${listName}</strong></p>
-        </div>
-        `
-            : ""
-        }
+  const fmtCurrency = (amount?: number) => {
+    if (amount === undefined || amount === null) return "";
+    try {
+      return new Intl.NumberFormat("es-ES", { style: "currency", currency: "ARS" }).format(amount);
+    } catch {
+      return `$${amount}`;
+    }
+  };
 
-        ${
-          giftAmount
-            ? `
-        <div class="message">
-          <p>Monto del regalo: <strong>$${giftAmount
-            .toLocaleString("es-ES", {
-              style: "currency",
-              currency: "USD",
-            })
-            .replace("US$", "")}</strong></p>
-        </div>
-        `
-            : ""
-        }
+  const emailTemplate = `<!doctype html>
+  <html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      :root{color-scheme: light dark}
+      /* Email-friendly, minimal festive styles */
+      body{font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial; background:#ffffff;margin:0;padding:28px;color:#0f172a}
+      .container{max-width:640px;margin:0 auto;padding:0 12px}
+      .header{display:flex;justify-content:center;align-items:center;margin-bottom:10px}
+      .greeting{font-size:15px;color:#374151;margin:0 0 8px}
+      .lead{font-size:13px;color:#6b7280;margin:6px 0}
+      .recipient{font-size:36px;line-height:1;margin:6px 0 14px;font-weight:800;color:#0b6b3a}
+      .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+      .pill{display:inline-block;background:transparent;border-radius:20px;padding:6px 10px;border:1px solid #eef2f7;color:#374151;font-size:13px}
+      .participants{font-size:14px;color:#374151;margin:12px 0}
+      .ideas{font-size:14px;color:#374151;margin:12px 0}
+      .divider{height:1px;background:#f1f5f9;margin:20px 0;border-radius:1px}
+      .footer{margin-top:18px;padding-top:12px;font-size:13px;color:#6b7280;text-align:left}
+      .cta-link{color:#b91c1c;text-decoration:none;font-weight:600}
+      @media (prefers-color-scheme: dark){body{background:#041226;color:#e6eef8}.pill{border-color:#0b1720}}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header"><h2 style="font-size:15px;margin:0;color:#0f172a;">Secret Santa</h2></div>
 
-        <div class="message">
-          <p>Has sido asignado como el Secret Santa de:</p>
-          <p class="recipient">${recipientName}</p>
-        </div>
-        <p>Recuerda mantener el secreto y diviértete eligiendo un regalo especial para tu persona asignada. ¡La magia de la Navidad está en dar!</p>
-        
-        <p>Participantes de este año:</p>
-        <ul class="participant-list">
-          ${sortedParticipants.map((participant) => `<li>${participant.name}</li>`).join("")}
-        </ul>
-        <p>Algunas ideas para regalos:</p>
-        <ul>
-          <li>Un libro interesante</li>
-          <li>Una experiencia divertida</li>
-          <li>Algo hecho a mano con cariño</li>
-          <li>Un accesorio útil para su hobby favorito</li>
-        </ul>
-        <p>¡Que tengas una feliz Navidad llena de alegría y sorpresas!</p>
-        <div class="footer">
-          <p>Este es un correo automático. Por favor, no respondas a este mensaje.</p>
-        </div>
+      <p class="greeting">Hola ${santaName},</p>
+
+      <div class="lead">Tu persona asignada es:</div>
+      <div class="recipient">${recipientName}</div>
+
+      ${listName ? `<div class="meta"><div class="pill">Evento: ${listName}</div></div>` : ""}
+      ${giftAmount ? `<div class="meta"><div class="pill">Monto orientativo: ${fmtCurrency(giftAmount)}</div></div>` : ""}
+
+      <div class="participants">
+        <strong>Participantes</strong>
+        <div style="margin-top:8px">${sortedParticipants.map((p) => `<div>${p.name}</div>`).join("")}</div>
       </div>
-    </body>
-    </html>
-  `;
+
+      <div class="ideas">
+        <strong>Ideas rápidas</strong>
+        <ul style="margin-top:8px;padding-left:18px;margin-bottom:0">
+          <li>Un libro significativo</li>
+          <li>Una pequeña experiencia</li>
+          <li>Algo hecho a mano con cariño</li>
+        </ul>
+      </div>
+
+      <div class="divider" aria-hidden></div>
+
+      <div class="footer">
+        <div style="margin-bottom:8px">Este correo contiene solo tu asignación — por favor, no lo compartas.</div>
+        ${
+          SITE_URL
+            ? `<div style="margin-bottom:8px">Si quieres crear este sorteo, visita mi página: <a class="cta-link" href="${SITE_URL}" target="_blank" rel="noopener noreferrer">${SITE_URL.replace(
+                /^https?:\/\//,
+                ""
+              )}</a></div>`
+            : ""
+        }
+        <div style="font-size:12px;color:#9ca3af">Mensaje automático — no respondas este correo</div>
+      </div>
+    </div>
+  </body>
+  </html>`;
 
   try {
     await transporter.sendMail({
-      from: `"Santa Claus" <${process.env.EMAIL_USER}>`,
+      from: `"Secret Santa" <${process.env.EMAIL_USER}>`,
       to: to,
-      subject: "¡Tu asignación de Secret Santa!",
+      subject: "Secret Santa | Tu asignación",
       html: emailTemplate,
     });
   } catch (error) {
@@ -182,14 +140,7 @@ export async function assignSecretSantas(participants: Participant[], listName?:
 
     console.log(`Sending email to ${assignment.santa.email}`);
 
-    await sendEmail(
-      assignment.santa.email,
-      assignment.santa.name,
-      assignment.recipient.name,
-      participants,
-      listName,
-      giftAmount
-    );
+    await sendEmail(assignment.santa.email, assignment.santa.name, assignment.recipient.name, participants, listName, giftAmount);
   }
 
   return { success: true };

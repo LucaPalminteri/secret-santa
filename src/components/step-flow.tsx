@@ -11,9 +11,10 @@ type Props = {
   initialAmount?: number | undefined;
   onComplete: (listName: string, giftAmount?: number) => void;
   onCancel?: () => void;
+  autoFocus?: boolean;
 };
 
-export default function StepFlow({ initialName = "", initialAmount, onComplete, onCancel }: Props) {
+export default function StepFlow({ initialName = "", initialAmount, onComplete, onCancel, autoFocus = true }: Props) {
   const [step, setStep] = useState<number>(0);
   const [listName, setListName] = useState<string>(initialName);
   const [giftAmount, setGiftAmount] = useState<number | undefined>(initialAmount);
@@ -21,13 +22,14 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
   const amountRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    // focus the relevant input when step changes
+    // focus the relevant input when step changes (opt-out via autoFocus)
+    if (!autoFocus) return;
     if (step === 0) {
       listRef.current?.focus();
     } else if (step === 1) {
       amountRef.current?.focus();
     }
-  }, [step]);
+  }, [step, autoFocus]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -67,8 +69,11 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
 
         <div className="relative">
           <div className="overflow-hidden">
-            <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${step * 100}%)` }}>
-              <div className="w-full flex-shrink-0 px-2">
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: `translate3d(-${step * 100}%, 0, 0)`, willChange: "transform" }}
+            >
+              <div className="w-full flex-shrink-0 box-border px-2">
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Nombre de la lista</h2>
                   <p className="text-sm text-gray-600 text-center">Pon un nombre que identifique este Secret Santa.</p>
@@ -89,7 +94,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                 </div>
               </div>
 
-              <div className="w-full flex-shrink-0 px-2">
+              <div className="w-full flex-shrink-0 box-border px-2">
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Monto del regalo</h2>
                   <p className="text-sm text-gray-600 text-center">Define un monto orientativo para todos los regalos.</p>
@@ -111,7 +116,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                 </div>
               </div>
 
-              <div className="w-full flex-shrink-0 px-2">
+              <div className="w-full flex-shrink-0 box-border px-2">
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Listo</h2>
                   <p className="text-sm text-gray-600 text-center">Has completado la configuración básica. Continúa para añadir participantes.</p>

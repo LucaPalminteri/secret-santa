@@ -157,9 +157,9 @@ export default function SecretSantaApp() {
       // Assignment UI now shows a full-screen success state; toast here is redundant and removed.
       // clear in-memory state and show success state in the single AssignLoading component
       // persist/localStorage will be cleared when the user dismisses the success screen
-      setParticipants([]);
-      setListName("");
-      setGiftAmount(0);
+      // Do not mutate local in-memory state here. We defer clearing/persist changes
+      // until the user dismisses the AssignLoading success screen to avoid
+      // saving intermediate empty values (like giftAmount=0) into localStorage.
       setAssignStatus("success");
     } catch (error) {
       console.log(error);
@@ -185,7 +185,7 @@ export default function SecretSantaApp() {
   const resetApp = () => {
     setParticipants([]);
     setListName("");
-    setGiftAmount(0);
+    setGiftAmount(undefined);
     setFlowStarted(false);
     setFlowComplete(false);
   };
@@ -283,30 +283,29 @@ export default function SecretSantaApp() {
               </div>
             </div>
 
-            {/* StepFlow overlay */}
-            <div
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                flowStarted && !flowComplete ? "opacity-100 z-20" : "opacity-0 pointer-events-none"
-              }`}
-            >
-              <div className="w-full h-full flex items-center justify-center px-1 sm:px-2 py-3">
-                <div className="w-full">
-                  <StepFlow
-                    initialName={listName}
-                    initialAmount={giftAmount}
-                    onCancel={() => {
-                      setFlowStarted(false);
-                    }}
-                    onComplete={(name, amount) => {
-                      setListName(name);
-                      setGiftAmount(amount ?? undefined);
-                      setFlowComplete(true);
-                      setFlowStarted(false);
-                    }}
-                  />
+            {/* StepFlow overlay — only mount StepFlow when visible to avoid hidden-input focus */}
+            {flowStarted && !flowComplete ? (
+              <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100 z-20">
+                <div className="w-full h-full flex items-center justify-center px-1 sm:px-2 py-3">
+                  <div className="w-full">
+                    <StepFlow
+                      initialName={listName}
+                      initialAmount={giftAmount}
+                      autoFocus={false}
+                      onCancel={() => {
+                        setFlowStarted(false);
+                      }}
+                      onComplete={(name, amount) => {
+                        setListName(name);
+                        setGiftAmount(amount ?? undefined);
+                        setFlowComplete(true);
+                        setFlowStarted(false);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
           {flowComplete && (
             <div className="w-full max-w-2xl mx-auto p-2 space-y-4">

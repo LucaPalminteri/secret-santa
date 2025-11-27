@@ -24,7 +24,7 @@ export const metadata: Metadata = {
       url: "https://github.com/LucaPalminteri",
     },
   ],
-  themeColor: "#FF0000",
+  // themeColor: "#FF0000",
   openGraph: {
     title: "Secret Santa",
     description: "Organize a Secret Santa gift exchange effortlessly with this app.",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description: "Organize a Secret Santa gift exchange effortlessly with this app.",
     images: ["https://secret-santa-blue-six.vercel.app/santa.jpg"],
   },
-  viewport: "width=device-width, initial-scale=1.0",
+  // viewport: "width=device-width, initial-scale=1.0",
   icons: {
     icon: "/favicon.ico",
     apple: "/favicon.ico",

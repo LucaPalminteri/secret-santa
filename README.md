@@ -66,6 +66,17 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## TODO
+
+- [] error on second step (amount), stuck in the middle
+- [] error on main page, open keyboard on mobile
+- [] move the info text to the bottom
+
+Notes
+
+- Required env vars: `EMAIL_USER`, `EMAIL_PASS` (used by server email-sending code).
+- Current minimum participants: 3 (hardcoded check in `src/components/secret-santa.tsx`).
+
 ## License
 
 This project is licensed under the MIT License.

@@ -5,6 +5,11 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Prevent accidental horizontal scroll introduced by large decorative elements */
+html,
+body {
+  overflow-x: hidden;
+}
 
 @layer base {
   :root {
@@ -68,5 +73,172 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* CTA entrance animation: slower, smoother fade + upward slide + tiny overshoot */
+@keyframes ctaEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.995);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.002);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cta-entrance {
+  animation: ctaEntrance 1100ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+}
+
+.cta-exit {
+  transition:
+    opacity 280ms ease,
+    transform 280ms ease;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Enhanced CTA micro-animations */
+@keyframes ctaBlobEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.94) rotate(0deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(6px) scale(1.03) rotate(8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ctaBlobRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ctaTitleIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.006);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ctaSubIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ctaBtnPop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cta-blob {
+  animation:
+    ctaBlobEntrance 1200ms cubic-bezier(0.22, 0.9, 0.36, 1) both,
+    ctaBlobRotate 30s linear 1s infinite;
+}
+
+.cta-title {
+  animation: ctaTitleIn 1100ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+  animation-delay: var(--cta-title-delay, 160ms);
+}
+
+.cta-sub {
+  animation: ctaSubIn 900ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+  animation-delay: var(--cta-sub-delay, 320ms);
+}
+
+.cta-buttons {
+  opacity: 0;
+  animation: ctaBtnPop 900ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+  animation-delay: var(--cta-buttons-delay, 520ms);
+  display: flex;
+  gap: 0.5rem;
+}
+.cta-buttons .cta-btn-primary {
+  animation-delay: var(--cta-btn-primary-delay, 640ms);
+}
+.cta-buttons .cta-btn-ghost {
+  animation-delay: var(--cta-btn-ghost-delay, 760ms);
+}
+
+.cta-blob {
+  animation-delay: var(--cta-blob-delay, 40ms);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cta-entrance,
+  .cta-blob,
+  .cta-title,
+  .cta-sub,
+  .cta-buttons,
+  .cta-exit {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Message fade used in AssignLoading for rotating messages */
+@keyframes msgFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.msg-fade {
+  animation: msgFadeIn 420ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

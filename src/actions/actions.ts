@@ -216,8 +216,6 @@ export async function assignSecretSantas(participants: Participant[], listName?:
     recipient: finalOrder[(index + 1) % finalOrder.length],
   }));
 
-  return;
-
   for (const assignment of assignments) {
     const isValidEmail = await validateEmail(assignment.santa.email);
     if (!isValidEmail) {

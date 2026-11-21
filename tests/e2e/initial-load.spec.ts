@@ -14,7 +14,7 @@ for (const restoreList of [false, true]) {
     const heading = page.getByRole("heading", { name: "Secret Santa", exact: true });
     const start = page.getByRole("button", { name: "Empezar ahora" });
     await expect(heading).toBeVisible();
-    await expect(page.getByRole("link", { name: "Cómo funciona (ayuda)" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "¿Cómo funciona? (ayuda)" })).toBeVisible();
     await expect(page.getByText("Cargando tu lista...", { exact: true })).toHaveCount(0);
     await expect(start).toBeDisabled();
     await expect(page.getByRole("textbox")).toHaveCount(0);

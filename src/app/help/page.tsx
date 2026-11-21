@@ -4,7 +4,7 @@ export default function HelpPage() {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-red-50 to-green-50 p-6 flex items-start sm:items-center justify-center">
       <main className="w-full max-w-2xl text-gray-900">
-        <h1 className="text-2xl font-semibold mb-4">Cómo funciona</h1>
+        <h1 className="text-2xl font-semibold mb-4">¿Cómo funciona?</h1>
 
         <p className="mb-4 text-sm text-muted-foreground">
           Esta aplicación te ayuda a organizar un Secret Santa de forma rápida y sencilla. Aquí tienes los pasos básicos para usarla.

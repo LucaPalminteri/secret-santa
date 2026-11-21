@@ -109,9 +109,9 @@ test("requires three participants before enabling assignment", async ({ page }) 
 
 test("opens help and returns to the saved list", async ({ page }) => {
   await createList(page);
-  await page.getByRole("link", { name: "Cómo funciona (ayuda)" }).click();
+  await page.getByRole("link", { name: "¿Cómo funciona? (ayuda)" }).click();
   await expect(page).toHaveURL("/help");
-  await expect(page.getByRole("heading", { name: "Cómo funciona" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "¿Cómo funciona?" })).toBeVisible();
   await page.getByRole("link", { name: "Volver a la app" }).click();
   await expect(page).toHaveURL("/");
   await expect(page.getByText("Navidad de prueba", { exact: true })).toBeVisible();

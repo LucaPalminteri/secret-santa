@@ -209,7 +209,7 @@ export default function AssignLoading({ open, messages = [], fullScreen = false,
   );
 
   if (fullScreen) {
-    return <div className="min-h-dvh bg-gradient-to-b from-red-50 to-green-50 p-6 flex items-center justify-center">{layered}</div>;
+    return <main className="flex-1 w-full p-6 flex items-center justify-center">{layered}</main>;
   }
 
   // Overlay/modal variant (minimal)

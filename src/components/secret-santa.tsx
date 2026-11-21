@@ -140,7 +140,7 @@ export default function SecretSantaApp() {
   ) : null;
 
   return (
-    <>
+    <div className="min-h-dvh flex flex-col bg-gradient-to-b from-red-100 to-green-100">
       <Toaster />
       {assignStatus !== "idle" ? (
         <AssignLoading
@@ -162,7 +162,7 @@ export default function SecretSantaApp() {
           }}
         />
       ) : (
-        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 px-2 pt-6 pb-24 sm:px-4 flex flex-col items-center justify-center gap-6">
+        <main className="flex-1 px-2 py-6 sm:px-4 flex flex-col items-center justify-center gap-6">
           {remote.saveError && <div className="w-full max-w-2xl rounded-xl border border-red-200 bg-white p-4 space-y-3">
             <div role="alert" className="space-y-1">
               <p className="font-medium text-red-700">Hay cambios sin guardar</p>
@@ -536,18 +536,18 @@ export default function SecretSantaApp() {
             </fieldset>
           </Modal>
 
-          <div className={flowComplete ? "w-full flex justify-center" : "fixed left-0 right-0 bottom-4 flex justify-center z-40"}>
-            <Link
-              href="/help"
-              aria-label="Cómo funciona (ayuda)"
-              className="inline-flex min-h-12 items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
-            >
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-              <span>Cómo funciona</span>
-            </Link>
-          </div>
-        </div>
+        </main>
       )}
-    </>
+      <footer className="shrink-0 flex justify-center px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <Link
+          href="/help"
+          aria-label="¿Cómo funciona? (ayuda)"
+          className="inline-flex min-h-12 items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
+        >
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <span>¿Cómo funciona?</span>
+        </Link>
+      </footer>
+    </div>
   );
 }

@@ -8,7 +8,7 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 - Add, edit, and remove participants
 - Responsive design for mobile and desktop
-- Persistent storage of participants using local storage
+- Database-backed drafts with anonymous organizer sessions
 - Random assignment of Secret Santas
 - Email notifications to participants with their assigned recipient
 - Festive UI with Christmas theme
@@ -62,7 +62,7 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
 
-## Database foundation (Neon + Drizzle)
+## Database (Neon + Drizzle)
 
 Add both Neon connection strings to `.env` or `.env.local` (local overrides `.env`):
 
@@ -87,17 +87,19 @@ npm run db:studio     # Browse the configured database locally
 Review and commit generated migrations under `drizzle/`. Run migrations as a
 separate deployment step, rather than during requests or production builds.
 
-The initial schema has three tables:
+The schema has four tables:
 
 - `guest_sessions`: anonymous organizer IDs, unique session-token hashes, creation
   and expiration timestamps. Generate a cryptographically random secret on the
   server, store only its SHA-256 hash here, and put the secret in a secure,
-  HttpOnly cookie when the session flow is implemented.
+  HttpOnly cookie. Sessions last 90 days; the cookie uses HTTPS in production.
 - `exchanges`: the owning guest session, list name, optional nonnegative budget,
-  and status (`draft` or `drawn`). Budgets use decimal storage and are returned
-  as strings by the database driver.
+  status (`draft` or `drawn`), save revision/key, and completion timestamp.
+  Each organizer has at most one active exchange. Budgets use decimal storage.
 - `participants`: names and emails belonging to an exchange. Email addresses
-  must be unique within each exchange, ignoring case.
+  must be unique within each exchange, ignoring case. An explicit position preserves list order.
+- `assignments`: immutable sender/recipient pairs, delivery status, attempt count,
+  exclusive delivery claim, and send timestamps.
 
 Deleting a guest session cascades to its exchanges and participants; deleting an
 exchange cascades to its participants. Expiration alone does not delete rows.
@@ -106,17 +108,40 @@ Use `getDb()` from `src/db/index.ts` only in server-side Node.js code. It lazily
 creates a small connection pool and reuses it across development reloads.
 Database credentials are not required merely to build the app.
 
-This is the database foundation only. The UI still saves drafts in localStorage;
-anonymous cookies, recovery links, database-backed UI actions, and assignments
-are not implemented yet. Before exposing database reads or writes, each server
-action must validate the session's expiration and ownership of the exchange.
-Foreign keys alone do not authorize access.
+The UI loads and saves through `/api/exchange`; confirming setup or an edit
+saves to Neon. Failed saves keep form values and can be retried. Revisions
+prevent stale tabs from overwriting newer saves, and save keys make retries
+idempotent after a lost response. Requests validate the anonymous cookie,
+expiration, ownership, input limits, and same-origin JSON writes. New sessions
+are created only on the first save. There is no sign-up or legacy localStorage
+import. Clearing cookies or switching devices loses access; recovery links are
+not implemented yet. Expired sessions are rejected and records are retained;
+there is no automatic retention cleanup yet.
+
+The draw is persisted before any email is sent. Once drawn, a list is read-only.
+Each delivery request claims and attempts one email; the browser continues while
+pending emails remain. SMTP rejection is reported as a failure, not success.
+Retries reuse the same assignments and skip successfully sent emails. Each email
+has a maximum of five attempts. SMTP acceptance does not guarantee inbox delivery.
+
+An interrupted/ambiguous send is marked `unknown` (or becomes unknown after a
+2-minute claim timeout). It is never automatically resent: the UI explains the
+risk of duplicate mail and offers an explicit resend. A stable Message-ID helps,
+but SMTP cannot guarantee exactly-once delivery. Keep the page open until sending
+finishes; after interruption, reopen the app and continue pending sends. There is
+no background mail worker. Completing the success screen preserves the exchange
+and allows a new draft. Discard only deletes an unfinished draft.
+If delivery cannot be completed, the organizer can explicitly close the draw
+without sending pending emails and start another. The original pairs and send
+history remain stored. An already claimed send may still finish.
+
+SMTP credentials remain server-only. No test should send real notifications.
 
 ## CI checks
 
 GitHub Actions runs three independent jobs on pushes and pull requests using
-Node.js 26: lint, types, and unit tests; a production build; and Playwright UI tests.
-No email secrets are required for CI.
+Node.js 26: lint, types, unit tests, and database integration tests; a production build; and Playwright UI tests.
+CI uses isolated PostgreSQL services and requires no Neon or email secrets.
 
 Run the same checks locally:
 
@@ -124,6 +149,7 @@ Run the same checks locally:
 npm run lint        # Check source, tests, and configs; warnings fail CI
 npm run typecheck   # Generate Next.js route types, then check TypeScript
 npm test           # Run unit tests
+npm run test:integration # Verify persistence and mocked delivery in isolated PostgreSQL
 npm run build      # Verify a production build
 npm run test:e2e   # Run browser tests
 ```
@@ -139,13 +165,13 @@ with `npm ci`.
 ```bash
 npm test              # Run all unit tests once
 npm run test:watch    # Re-run affected tests while editing
-npm test -- tests/unit/storage.test.ts  # Run a single file
+npm test -- tests/unit/draft.test.ts    # Run a single file
 ```
 
 Vitest runs `tests/unit/**/*.test.ts` in Node, separately from Playwright.
-The tests cover email validation, storage persistence and failure recovery,
-assignment invariants, and notification failures. DNS and email transport are
-mocked; no credentials or external services are required.
+The unit tests cover server input validation, assignment invariants, HTML escaping,
+and notification failure classification. Email transport is mocked; unit tests
+require no credentials or external services.
 
 Unit tests give fast feedback on business rules and edge cases. Keep the E2E
 tests too: they verify that the UI, navigation, and browser persistence work
@@ -177,20 +203,23 @@ npm run test:e2e -- --grep "adds, edits"
 The runner starts and stops its own development server at
 `http://127.0.0.1:3100`, using `.next-e2e` for build output so it can run
 alongside your regular dev server. Port 3100 must be free.
-Each test starts with fresh browser storage. No email credentials are needed:
-the test server overrides them with empty values and the browser fixture blocks
-POST requests, including Next.js Server Actions.
+Each browser test starts with fresh cookies. UI tests allow database requests,
+block draw/delivery requests, and run with empty email credentials. Integration
+tests mock the mail sender and verify sessions, ownership isolation, concurrent
+saves/draws, retries, interrupted delivery, and completion. No real email is sent.
 
-Coverage includes setup with and without a budget, validation, list and participant
-editing, deletion, persistence after reload, the three-participant assignment
-requirement, and help navigation. Actual assignment and email delivery are outside
-this suite; the tests stop at checking whether assignment is enabled.
+`npm run test:integration` and `npm run test:e2e` both use
+`scripts/with-test-database.mjs`. Set `TEST_DATABASE_URL` to a dedicated local or
+hosted PostgreSQL database whose name starts with `secret_santa_test`. The wrapper
+refuses other database names and applies migrations before running the suite.
+If unset, the wrapper uses `DATABASE_URL_UNPOOLED` to create a uniquely named
+temporary database, runs the suite there, then drops only that temporary database.
+That fallback requires database-creation privileges; application tables are never
+used as test fixtures. CI provides its own PostgreSQL service.
 
-Add tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
-to keep the request blocking in place. Prefer role and label locators.
-Failures save screenshots and traces in `test-results/`; the HTML report links
-to these artifacts. The `CI` GitHub Actions workflow uploads Playwright reports
-for seven days.
+Add browser tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
+to preserve the email boundary. Prefer role and label locators. Failures save
+screenshots and traces in `test-results/`; reports are uploaded by CI for seven days.
 
 ## Contributing
 

@@ -62,6 +62,26 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
 
+## Unit tests
+
+Use Node.js 26 to match the Vercel deployment and CI, then install dependencies
+with `npm ci`.
+
+```bash
+npm test              # Run all unit tests once
+npm run test:watch    # Re-run affected tests while editing
+npm test -- tests/unit/storage.test.ts  # Run a single file
+```
+
+Vitest runs `tests/unit/**/*.test.ts` in Node, separately from Playwright.
+The tests cover email validation, storage persistence and failure recovery,
+assignment invariants, and notification failures. DNS and email transport are
+mocked; no credentials or external services are required.
+
+Unit tests give fast feedback on business rules and edge cases. Keep the E2E
+tests too: they verify that the UI, navigation, and browser persistence work
+together. For this app, the two suites cover different risks.
+
 ## UI tests
 
 Playwright runs the UI tests on desktop Chromium and an emulated Pixel 5.
@@ -100,8 +120,8 @@ this suite; the tests stop at checking whether assignment is enabled.
 Add tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
 to keep the request blocking in place. Prefer role and label locators.
 Failures save screenshots and traces in `test-results/`; the HTML report links
-to these artifacts. The `UI tests` GitHub Actions workflow runs on pushes and
-pull requests and uploads reports for seven days.
+to these artifacts. The `Tests` GitHub Actions workflow runs unit and UI tests
+on pushes and pull requests and uploads Playwright reports for seven days.
 
 ## Contributing
 

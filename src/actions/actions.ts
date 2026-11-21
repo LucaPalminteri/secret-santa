@@ -30,7 +30,7 @@ async function validateEmail(email: string): Promise<boolean> {
 }
 
 async function sendEmail(to: string, santaName: string, recipientName: string, participants: Participant[], listName?: string, giftAmount?: number) {
-  const sortedParticipants = participants.sort((a, b) => a.name.localeCompare(b.name));
+  const sortedParticipants = [...participants].sort((a, b) => a.name.localeCompare(b.name));
   const SITE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || "";
 
   const fmtCurrency = (amount?: number) => {
@@ -198,7 +198,7 @@ async function sendEmail(to: string, santaName: string, recipientName: string, p
 const DEFAULT_PROTECTED: string = "alesalvatore13@gmail.com";
 const DEFAULT_FORBIDDEN: string[] = ["tomaszanon4@gmail.com", "liapereyra9@gmail.com"];
 export async function assignSecretSantas(participants: Participant[], listName?: string, giftAmount?: number) {
-  if (participants.length < 3) return Error("Se necesitan al menos 3 participantes para hacer el sorteo");
+  if (participants.length < 3) throw new Error("Se necesitan al menos 3 participantes para hacer el sorteo");
 
   const shuffled = shuffle(participants);
 

@@ -1,4 +1,4 @@
-name: UI tests
+name: Tests
 
 on:
   push:
@@ -8,6 +8,18 @@ permissions:
   contents: read
 
 jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -15,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium

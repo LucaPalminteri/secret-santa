@@ -62,6 +62,47 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
 
+## UI tests
+
+Playwright runs the UI tests on desktop Chromium and an emulated Pixel 5.
+Install the test browser once after installing dependencies:
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run test:e2e          # Run all UI tests headlessly
+npm run test:e2e:ui       # Interactive runner: select, watch, and debug tests
+npm run test:e2e:headed   # Watch tests in a browser window
+npm run test:e2e:report   # Open the last HTML report
+```
+
+Run one scenario or device with Playwright's filters:
+
+```bash
+npm run test:e2e -- --project=chromium
+npm run test:e2e -- --grep "adds, edits"
+```
+
+The runner starts and stops its own development server at
+`http://127.0.0.1:3100`, using `.next-e2e` for build output so it can run
+alongside your regular dev server. Port 3100 must be free.
+Each test starts with fresh browser storage. No email credentials are needed:
+the test server overrides them with empty values and the browser fixture blocks
+POST requests, including Next.js Server Actions.
+
+Coverage includes setup with and without a budget, validation, list and participant
+editing, deletion, persistence after reload, the three-participant assignment
+requirement, and help navigation. Actual assignment and email delivery are outside
+this suite; the tests stop at checking whether assignment is enabled.
+
+Add tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
+to keep the request blocking in place. Prefer role and label locators.
+Failures save screenshots and traces in `test-results/`; the HTML report links
+to these artifacts. The `UI tests` GitHub Actions workflow runs on pushes and
+pull requests and uploads reports for seven days.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

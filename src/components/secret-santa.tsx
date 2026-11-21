@@ -22,6 +22,7 @@ import AssignLoading from "./assign-loading";
 
 export default function SecretSantaApp() {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [storageLoaded, setStorageLoaded] = useState(false);
   const [listName, setListName] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -46,6 +47,7 @@ export default function SecretSantaApp() {
         setFlowComplete(true);
       }
     }
+    setStorageLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -55,8 +57,10 @@ export default function SecretSantaApp() {
   }, []);
 
   useEffect(() => {
+    // Do not overwrite saved data with initial empty state during mounting.
+    if (!storageLoaded) return;
     saveSecretSantaData({ participants, listName, giftAmount });
-  }, [participants, listName, giftAmount]);
+  }, [participants, listName, giftAmount, storageLoaded]);
 
   const addParticipant = () => {
     if (!name.trim()) {
@@ -86,7 +90,7 @@ export default function SecretSantaApp() {
       return;
     }
 
-    const duplicateEmail = participants.some((p) => p.email.toLowerCase() === email.toLowerCase());
+    const duplicateEmail = participants.some((p) => p.id !== editingId && p.email.toLowerCase() === email.toLowerCase());
     if (duplicateEmail) {
       toast({
         title: "Error",
@@ -377,10 +381,10 @@ export default function SecretSantaApp() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)}>
+                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)} aria-label="Editar participante">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" onClick={() => removeParticipant(p.id)}>
+                          <Button variant="ghost" onClick={() => removeParticipant(p.id)} aria-label="Eliminar participante">
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>

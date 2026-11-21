@@ -28,9 +28,9 @@ export default function HelpPage() {
         </ol>
 
         <p className="mb-4 text-sm text-muted-foreground">
-          La lista se guarda en nuestra base de datos alojada en Neon. Una cookie privada permite volver a abrirla en este navegador durante
-          90 días, sin crear una cuenta. Los nombres y correos se usan para organizar el sorteo y enviar las notificaciones a través del proveedor de correo.
-          Si borras las cookies o cambias de dispositivo, no podrás recuperar el acceso por ahora. Las listas antiguas de localStorage no se importan.
+          Tu lista se guarda automáticamente y puedes volver a abrirla desde el mismo navegador durante 90 días, sin crear una cuenta.
+          Los nombres y correos se usan para organizar el sorteo y enviar las notificaciones.
+          Si borras los datos de navegación o cambias de dispositivo, no podrás recuperar el acceso por ahora.
         </p>
 
         <div className="mt-6">

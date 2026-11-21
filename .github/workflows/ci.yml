@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -8,9 +8,10 @@ permissions:
   contents: read
 
 jobs:
-  unit:
+  checks:
+    name: Lint, types, and unit tests
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,9 +19,28 @@ jobs:
           node-version: 26
           cache: npm
       - run: npm ci
-      - run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run build
 
   playwright:
+    name: UI tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

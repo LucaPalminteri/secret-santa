@@ -62,6 +62,25 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
 
+## CI checks
+
+GitHub Actions runs three independent jobs on pushes and pull requests using
+Node.js 26: lint, types, and unit tests; a production build; and Playwright UI tests.
+No email secrets are required for CI.
+
+Run the same checks locally:
+
+```bash
+npm run lint        # Check source, tests, and configs; warnings fail CI
+npm run typecheck   # Generate Next.js route types, then check TypeScript
+npm test           # Run unit tests
+npm run build      # Verify a production build
+npm run test:e2e   # Run browser tests
+```
+
+ESLint excludes generated build output and test reports. Type checking generates
+route types first, so it also works on a fresh clone before the app has been built.
+
 ## Unit tests
 
 Use Node.js 26 to match the Vercel deployment and CI, then install dependencies
@@ -120,8 +139,8 @@ this suite; the tests stop at checking whether assignment is enabled.
 Add tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
 to keep the request blocking in place. Prefer role and label locators.
 Failures save screenshots and traces in `test-results/`; the HTML report links
-to these artifacts. The `Tests` GitHub Actions workflow runs unit and UI tests
-on pushes and pull requests and uploads Playwright reports for seven days.
+to these artifacts. The `CI` GitHub Actions workflow uploads Playwright reports
+for seven days.
 
 ## Contributing
 

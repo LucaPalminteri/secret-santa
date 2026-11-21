@@ -10,13 +10,14 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "node scripts/with-test-database.mjs integration",
     "db:check": "node scripts/check-db.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
+    "test:e2e": "node scripts/with-test-database.mjs e2e",
+    "test:e2e:ui": "node scripts/with-test-database.mjs e2e --ui",
+    "test:e2e:headed": "node scripts/with-test-database.mjs e2e --headed",
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {

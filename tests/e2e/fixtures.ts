@@ -1,11 +1,11 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-// Next.js Server Actions use POST. Block them before they can send real mail.
-// Each test receives a fresh browser context and empty localStorage by default.
+// Permit database saves, but block the draw/delivery endpoint before it can send
+// mail. The test server also has empty SMTP credentials and an isolated database.
 export const test = base.extend({
   page: async ({ page }, runTest) => {
     await page.route("**/*", async (route) => {
-      if (route.request().method() === "POST") {
+      if (route.request().method() === "POST" && new URL(route.request().url()).pathname === "/api/exchange" && route.request().postDataJSON()?.action === "draw") {
         await route.abort("blockedbyclient");
       } else {
         await route.continue();
@@ -26,6 +26,7 @@ export async function createList(page: Page, budget?: string) {
   await page.getByRole("button", { name: "Siguiente" }).click();
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByText("No hay participantes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
 }
 
 export async function addParticipant(page: Page, name: string, email: string) {

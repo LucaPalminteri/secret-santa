@@ -14,105 +14,63 @@ import { useToast } from "@/hooks/use-toast";
 import { useExchange } from "@/hooks/use-exchange";
 import { Spinner } from "./spinner";
 import { validateEmail } from "@/utils/utils";
+import { validateListDetails } from "@/utils/list-validation";
 import { Participant } from "@/utils/types";
 import StepFlow from "./step-flow";
 import Modal from "./modal";
 import AssignLoading from "./assign-loading";
 
 export default function SecretSantaApp() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const remote = useExchange();
+  const participants: Participant[] = remote.exchange?.participants ?? [];
+  const listName = remote.exchange?.listName ?? "";
+  const giftAmount = remote.exchange?.giftAmount;
+  const flowComplete = !!remote.exchange;
   const readOnly = remote.exchange?.status === "drawn";
   const [assignError, setAssignError] = useState("");
-  const [listName, setListName] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [giftAmount, setGiftAmount] = useState<number | undefined>(undefined);
+  const [participantErrors, setParticipantErrors] = useState<{ name?: string; email?: string }>({});
   const [isAssigning, setIsAssigning] = useState<boolean>(false);
   const [assignStatus, setAssignStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [assignDuration, setAssignDuration] = useState<number>(3000);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [flowStarted, setFlowStarted] = useState<boolean>(false);
-  const [flowComplete, setFlowComplete] = useState<boolean>(false);
-  const [ctaVisible, setCtaVisible] = useState<boolean>(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!remote.exchange) {
-      if (!remote.loading && !remote.loadError) {
-        setParticipants([]); setListName(""); setGiftAmount(undefined);
-        setFlowComplete(false); setFlowStarted(false);
-        setShowEditList(false); setShowAddParticipant(false);
-      }
-      return;
-    }
-    setParticipants(remote.exchange.participants);
-    setListName(remote.exchange.listName || "");
-    setGiftAmount(remote.exchange.giftAmount);
-    setFlowComplete(true);
-    setFlowStarted(false);
-  }, [remote.exchange, remote.loading, remote.loadError]);
-
-  useEffect(() => {
-    // small delay to trigger the CTA mount animation
-    const t = setTimeout(() => setCtaVisible(true), 80);
-    return () => clearTimeout(t);
-  }, []);
-
-  const addParticipant = async () => {
-    if (!name.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un nombre.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!email.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un correo electrónico.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!validateEmail(email.trim())) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un correo electrónico válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const addParticipant = () => {
+    if (remote.busy) return;
+    const errors: typeof participantErrors = {};
+    if (!name.trim()) errors.name = "Por favor, ingresa un nombre.";
+    if (!email.trim()) errors.email = "Por favor, ingresa un correo electrónico.";
+    else if (!validateEmail(email.trim())) errors.email = "Por favor, ingresa un correo electrónico válido.";
     const duplicateEmail = participants.some((p) => p.id !== editingId && p.email.toLowerCase() === email.trim().toLowerCase());
-    if (duplicateEmail) {
-      toast({
-        title: "Error",
-        description: "Este correo electrónico ya está registrado.",
-        variant: "destructive",
-      });
+    if (duplicateEmail) errors.email = "Este correo electrónico ya está registrado.";
+    if (!editingId && participants.length >= 50) errors.name = "Se permiten hasta 50 participantes.";
+    setParticipantErrors(errors);
+    if (errors.name || errors.email) {
+      (errors.name ? nameRef : emailRef).current?.focus();
       return;
     }
 
     const next = editingId
       ? participants.map((p) => p.id === editingId ? { ...p, name: name.trim(), email: email.trim() } : p)
       : [...participants, { id: uuidv4(), name: name.trim(), email: email.trim() }];
-    if (await remote.save({ participants: next, listName, giftAmount })) {
+    if (remote.save({ participants: next, listName, giftAmount })) {
       setEditingId(null);
+      setParticipantErrors({});
       setName(""); setEmail(""); setShowAddParticipant(false);
     }
   };
 
-  const removeParticipant = async (id: string) => {
-    await remote.save({ participants: participants.filter((p) => p.id !== id), listName, giftAmount });
+  const removeParticipant = (id: string) => {
+    remote.save({ participants: participants.filter((p) => p.id !== id), listName, giftAmount });
   };
 
   const handleEditParticipant = (id: string) => {
     const participant = participants.find((p) => p.id === id);
     if (participant) {
+      setParticipantErrors({});
       setEditingId(id);
       setName(participant.name);
       setEmail(participant.email);
@@ -144,15 +102,12 @@ export default function SecretSantaApp() {
   ];
 
   const resetApp = () => {
-    setParticipants([]);
     setShowAddParticipant(false);
     setShowEditList(false);
     setEditingId(null);
+    setParticipantErrors({});
     setName(""); setEmail("");
-    setListName("");
-    setGiftAmount(undefined);
     setFlowStarted(false);
-    setFlowComplete(false);
   };
 
   // local UI state for minimalist cards + modal
@@ -161,28 +116,28 @@ export default function SecretSantaApp() {
   const [giftAmountDraft, setGiftAmountDraft] = useState<number | string>(giftAmount ?? "");
   const [showAddParticipant, setShowAddParticipant] = useState<boolean>(false);
   const nameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const listNameRef = useRef<HTMLInputElement | null>(null);
+  const listAmountRef = useRef<HTMLInputElement | null>(null);
+  const [listErrors, setListErrors] = useState<{ name?: string; amount?: string }>({});
 
   useEffect(() => {
     setListNameDraft(listName);
     setGiftAmountDraft(giftAmount ?? "");
   }, [flowComplete, listName, giftAmount]);
 
-  useEffect(() => {
-    if (showAddParticipant || showEditList) {
-      // small delay to ensure modal mounts
-      setTimeout(() => nameRef.current?.focus(), 50);
-    }
-  }, [showAddParticipant, showEditList]);
-
-  if (remote.loading || remote.loadError) return (
-    <main className="min-h-dvh flex flex-col items-center justify-center gap-4 p-6 text-center">
-      <p role="status">{remote.loading ? "Cargando tu lista..." : remote.loadError}</p>
-      {remote.loadError && <>
+  const loadErrorNotice = remote.loadError ? (
+    <div className="mx-auto w-full max-w-lg rounded-xl bg-white/95 p-4 text-left shadow-sm space-y-3">
+      <div role="alert" className="space-y-1">
+        <p className="font-medium text-gray-900">No pudimos recuperar tu lista</p>
+        <p className="text-sm text-gray-600">{remote.loadError}</p>
+      </div>
+      <div className="flex flex-col gap-2">
         <Button onClick={() => void remote.load()}>Reintentar carga</Button>
         <Button variant="outline" onClick={() => void remote.resetSession()}>Volver a empezar sin recuperar la lista anterior</Button>
-      </>}
-    </main>
-  );
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -207,73 +162,54 @@ export default function SecretSantaApp() {
           }}
         />
       ) : (
-        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-2 sm:p-4 flex flex-col items-center justify-center gap-6">
-          <div className="text-center text-sm" aria-live="polite">
-            <p role="status">{remote.busy ? "Guardando cambios..." : remote.exchange ? "Guardado" : ""}</p>
-            {remote.error && !showAddParticipant && !showEditList && <div role="alert" className="text-red-700 space-y-2">
+        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 px-2 pt-6 pb-24 sm:px-4 flex flex-col items-center justify-center gap-6">
+          {remote.saveError && <div className="w-full max-w-2xl rounded-xl border border-red-200 bg-white p-4 space-y-3">
+            <div role="alert" className="space-y-1">
+              <p className="font-medium text-red-700">Hay cambios sin guardar</p>
+              <p className="text-sm text-gray-700">{remote.saveError}</p>
+              <p className="text-sm text-gray-600">Tus cambios siguen aquí. Reintenta antes de salir o sortear.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={remote.busy} onClick={() => void remote.retrySave()}>Reintentar guardado</Button>
+              <Button variant="outline" disabled={remote.busy} onClick={() => void remote.discardChanges()}>Descartar cambios y recuperar lista guardada</Button>
+            </div>
+          </div>}
+          {remote.error && !showAddParticipant && !showEditList && <div className="text-center text-sm" aria-live="polite">
+            <div role="alert" className="text-red-700 space-y-2">
               <p>{remote.error}</p>
-              {remote.hasPending && <Button variant="outline" disabled={remote.busy} onClick={async () => {
-                if (await remote.retrySave()) { setShowAddParticipant(false); setShowEditList(false); setEditingId(null); setName(""); setEmail(""); }
-              }}>Reintentar guardado</Button>}
-              <Button variant="outline" onClick={() => window.location.reload()}>Recargar lista guardada</Button>
-            </div>}
-          </div>
-          <div className="relative w-full max-w-[720px] mx-auto h-auto px-1">
-            {/* CTA (overlays with StepFlow) */}
-            <div
-              className={`absolute inset-0 flex items-center justify-center
-                ${
-                  flowStarted || flowComplete
-                    ? "opacity-0 pointer-events-none cta-exit"
-                    : ctaVisible
-                    ? "opacity-100 translate-y-0 cta-entrance"
-                    : "opacity-0 translate-y-4"
-                }`}
-            >
-              <div
-                className="relative w-full px-4 py-10 text-center"
-                style={
-                  {
-                    // custom stagger timings for CTA micro-animations
-                    // title, subtitle, buttons, and blob can be tuned here
-                    "--cta-title-delay": "180ms",
-                    "--cta-sub-delay": "340ms",
-                    "--cta-buttons-delay": "540ms",
-                    "--cta-btn-primary-delay": "700ms",
-                    "--cta-btn-ghost-delay": "820ms",
-                    "--cta-blob-delay": "60ms",
-                  } as React.CSSProperties
-                }
-              >
+            </div>
+          </div>}
+          {flowComplete && loadErrorNotice}
+          {!flowComplete && <div className="relative w-full max-w-[720px] mx-auto px-1">
+            {!flowStarted && <div className="welcome-enter flex items-center justify-center">
+              <div className="relative w-full px-4 py-10 text-center">
                 {/* decorative blob */}
                 <div
-                  className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/3 w-[min(60vw,380px)] h-[min(60vw,380px)] rounded-full bg-gradient-to-r from-pink-300 to-amber-200 opacity-30 blur-2xl pointer-events-none ${
-                    ctaVisible ? "cta-blob" : ""
-                  }`}
+                  className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/3 w-[min(60vw,380px)] h-[min(60vw,380px)] rounded-full bg-gradient-to-r from-pink-300 to-amber-200 opacity-30 blur-2xl pointer-events-none"
                   aria-hidden
                 />
                 <div className="relative z-10">
-                  <h1 className={`text-3xl sm:text-4xl font-extrabold mb-3 ${ctaVisible ? "cta-title" : "opacity-0"}`}>Secret Santa</h1>
-                  <p className={`text-sm sm:text-base mb-6 max-w-lg mx-auto text-muted-foreground ${ctaVisible ? "cta-sub" : "opacity-0"}`}>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold mb-3">Secret Santa</h1>
+                  <p className="text-sm sm:text-base mb-6 max-w-lg mx-auto text-muted-foreground">
                     Organiza intercambios con un flujo limpio y guiado. Empieza en segundos desde tu móvil.
                   </p>
-                  <div className={`flex flex-col sm:flex-row items-center justify-center ${ctaVisible ? "cta-buttons" : "opacity-0"} gap-3 sm:gap-5`}>
+                  {loadErrorNotice || <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
                     <Button
                       onClick={() => setFlowStarted(true)}
-                      className="cta-btn-primary w-full sm:w-auto px-6 py-3 text-base sm:text-lg transform transition-all duration-300 hover:scale-105 bg-gradient-to-r from-red-500 to-pink-500 text-white"
+                      disabled={remote.loading}
+                      aria-busy={remote.loading}
+                      className="w-full sm:w-auto px-6 py-3 text-base sm:text-lg transition-colors duration-200 bg-gradient-to-r from-red-500 to-pink-500 text-white disabled:opacity-100"
                     >
                       Empezar ahora
                     </Button>
-                  </div>
-
-                  {/* helper link moved to bottom of screen */}
+                  </div>}
                 </div>
               </div>
-            </div>
+            </div>}
 
-            {/* StepFlow overlay — only mount StepFlow when visible to avoid hidden-input focus */}
+            {/* Only mount the setup form when visible to avoid hidden-input focus. */}
             {flowStarted && !flowComplete ? (
-              <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100 z-20">
+              <div className="welcome-enter">
                 <div className="w-full h-full flex items-center justify-center px-1 sm:px-2 py-3">
                   <div className="w-full">
                     <StepFlow
@@ -284,17 +220,17 @@ export default function SecretSantaApp() {
                         setFlowStarted(false);
                       }}
                       busy={remote.busy}
-                      onComplete={async (name, amount) => {
-                        await remote.save({ listName: name, giftAmount: amount, participants: [] });
+                      onComplete={(name, amount) => {
+                        if (remote.save({ listName: name, giftAmount: amount, participants: [] })) setFlowStarted(false);
                       }}
                     />
                   </div>
                 </div>
               </div>
             ) : null}
-          </div>
+          </div>}
           {flowComplete && (
-            <fieldset disabled={remote.busy} className="w-full max-w-2xl mx-auto p-2 space-y-4">
+            <fieldset aria-label="Intercambio" aria-busy={remote.saving} disabled={remote.busy || remote.loading || !!remote.loadError} className="welcome-enter w-full max-w-2xl mx-auto p-2 space-y-4">
               {/* Card: List info (minimal) */}
               <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -307,7 +243,7 @@ export default function SecretSantaApp() {
                   </div>
                 </div>
                 <div>
-                  <Button variant="ghost" onClick={() => setShowEditList((s) => !s)} title="Editar lista" disabled={readOnly}>
+                  <Button variant="ghost" size="icon" onClick={() => { setListErrors({}); setShowEditList(true); }} aria-label="Editar lista" title="Editar lista" disabled={readOnly}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </div>
@@ -318,11 +254,12 @@ export default function SecretSantaApp() {
               {/* Card: Participants */}
               <div className="bg-white rounded-xl shadow-sm p-4">
                 {participants.length > 0 ? (
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="text-sm font-medium">Participantes</div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" onClick={() => setShowAddParticipant((s) => !s)} title="Agregar participante" disabled={readOnly}>
+                      <Button variant="ghost" onClick={() => { setParticipantErrors({}); setShowAddParticipant(true); }} title="Agregar participante" disabled={readOnly}>
                         <Plus className="h-4 w-4" />
+                        <span>Agregar participante</span>
                       </Button>
                     </div>
                   </div>
@@ -330,20 +267,21 @@ export default function SecretSantaApp() {
 
                 {/* modal will handle composer and list editing */}
 
-                {participants.length === 0 && !showAddParticipant ? (
+                {participants.length === 0 ? (
                   <div className="flex flex-col items-center py-8 gap-3 text-muted-foreground">
                     <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                       <UserPlus className="h-6 w-6" />
                     </div>
                     <div className="text-sm font-medium">No hay participantes</div>
                     <Button
-                      onClick={() => setShowAddParticipant(true)}
+                      onClick={() => { setParticipantErrors({}); setShowAddParticipant(true); }}
                       variant="ghost"
                       className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
                       aria-label="Agregar participante"
                       disabled={readOnly}
                     >
                       <Plus className="h-4 w-4" />
+                      <span>Agregar participante</span>
                     </Button>
                   </div>
                 ) : (
@@ -363,11 +301,11 @@ export default function SecretSantaApp() {
                             <div className="text-xs text-muted-foreground truncate">{p.email}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)} aria-label="Editar participante" disabled={readOnly}>
+                        <div className="flex shrink-0 items-center">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditParticipant(p.id)} aria-label="Editar participante" disabled={readOnly}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" onClick={() => removeParticipant(p.id)} aria-label="Eliminar participante" disabled={readOnly}>
+                          <Button variant="ghost" size="icon" onClick={() => removeParticipant(p.id)} aria-label="Eliminar participante" disabled={readOnly}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
@@ -382,7 +320,7 @@ export default function SecretSantaApp() {
                 <div className="text-center">
                   <Button
                     onClick={() => void handleAssign()}
-                    disabled={participants.length < 3 || isAssigning || remote.busy || !!remote.error}
+                    disabled={participants.length < 3 || isAssigning || remote.busy || !!remote.error || !!remote.saveError}
                     className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md disabled:opacity-60"
                     aria-label={readOnly ? "Continuar envío de correos" : "Asignar Secret Santas"}
                   >
@@ -425,9 +363,9 @@ export default function SecretSantaApp() {
             onOpenChange={(open) => {
               if (remote.busy) return;
               if (!open) {
-                remote.cancelEdit();
                 setShowAddParticipant(false);
                 setEditingId(null);
+                setParticipantErrors({});
                 setName("");
                 setEmail("");
               } else {
@@ -436,15 +374,16 @@ export default function SecretSantaApp() {
             }}
             title={editingId ? "Editar participante" : "Agregar participante"}
             description={editingId ? "Actualiza el participante." : "Agregar un nuevo participante a la lista."}
+            onSubmit={() => void addParticipant()}
             footer={
-              <div className="flex gap-2">
+              <div className="flex flex-col-reverse gap-2 min-[360px]:flex-row">
                 <Button
                   variant="outline"
                   disabled={remote.busy}
                   onClick={() => {
-                    remote.cancelEdit();
                     setShowAddParticipant(false);
                     setEditingId(null);
+                    setParticipantErrors({});
                     setName("");
                     setEmail("");
                   }}
@@ -452,30 +391,66 @@ export default function SecretSantaApp() {
                   aria-label="Cancelar"
                 >
                   <X className="h-5 w-5" />
-                  <span className="sr-only">Cancelar</span>
+                  <span>Cancelar</span>
                 </Button>
 
                 <Button
                   disabled={remote.busy}
-                  onClick={() => void addParticipant()}
+                  type="submit"
                   className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
                   aria-label={editingId ? "Guardar" : "Agregar"}
                 >
                   {editingId ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-                  <span className="sr-only">{editingId ? "Guardar" : "Agregar"}</span>
+                  <span>{remote.busy ? "Guardando..." : editingId ? "Guardar" : "Agregar"}</span>
                 </Button>
               </div>
             }
           >
             <fieldset disabled={remote.busy} className="space-y-3">
-              {remote.error && <p role="alert" className="text-sm text-red-700">{remote.error}</p>}
               <div>
                 <Label htmlFor="modal-name">Nombre</Label>
-                <Input ref={nameRef} id="modal-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
+                <Input
+                  ref={nameRef}
+                  id="modal-name"
+                  value={name}
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setParticipantErrors((errors) => ({ ...errors, name: undefined }));
+                  }}
+                  placeholder="Nombre"
+                  autoComplete="section-participant name"
+                  enterKeyHint="next"
+                  maxLength={100}
+                  aria-invalid={!!participantErrors.name}
+                  aria-describedby={participantErrors.name ? "modal-name-error" : undefined}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") { event.preventDefault(); emailRef.current?.focus(); }
+                  }}
+                />
+                {participantErrors.name && <p id="modal-name-error" role="alert" className="mt-1 text-sm text-red-700">{participantErrors.name}</p>}
               </div>
               <div>
                 <Label htmlFor="modal-email">Email</Label>
-                <Input id="modal-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
+                <Input
+                  ref={emailRef}
+                  id="modal-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="section-participant email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  enterKeyHint="done"
+                  maxLength={254}
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setParticipantErrors((errors) => ({ ...errors, email: undefined }));
+                  }}
+                  placeholder="correo@ejemplo.com"
+                  aria-invalid={!!participantErrors.email}
+                  aria-describedby={participantErrors.email ? "modal-email-error" : undefined}
+                />
+                {participantErrors.email && <p id="modal-email-error" role="alert" className="mt-1 text-sm text-red-700">{participantErrors.email}</p>}
               </div>
             </fieldset>
           </Modal>
@@ -485,7 +460,6 @@ export default function SecretSantaApp() {
             onOpenChange={(open) => {
               if (remote.busy) return;
               if (!open) {
-                remote.cancelEdit();
                 setShowEditList(false);
                 setListNameDraft(listName);
                 setGiftAmountDraft(giftAmount ?? "");
@@ -495,13 +469,23 @@ export default function SecretSantaApp() {
             }}
             title="Editar lista"
             description="Cambia el nombre de la lista y el monto orientativo."
+            onSubmit={() => {
+              if (remote.busy) return;
+              const amount = giftAmountDraft === "" ? undefined : Number(giftAmountDraft);
+              const errors = validateListDetails(listNameDraft, amount);
+              setListErrors(errors);
+              if (errors.name || errors.amount) {
+                (errors.name ? listNameRef : listAmountRef).current?.focus();
+                return;
+              }
+              if (remote.save({ listName: listNameDraft.trim(), giftAmount: amount, participants })) setShowEditList(false);
+            }}
             footer={
-              <div className="flex gap-2">
+              <div className="flex flex-col-reverse gap-2 min-[360px]:flex-row">
                 <Button
                   variant="outline"
                   disabled={remote.busy}
                   onClick={() => {
-                    remote.cancelEdit();
                     setShowEditList(false);
                     setListNameDraft(listName);
                     setGiftAmountDraft(giftAmount ?? "");
@@ -510,53 +494,53 @@ export default function SecretSantaApp() {
                   aria-label="Cancelar"
                 >
                   <X className="h-5 w-5" />
-                  <span className="sr-only">Cancelar</span>
+                  <span>Cancelar</span>
                 </Button>
 
                 <Button
                   disabled={remote.busy}
-                  onClick={async () => {
-                    if (await remote.save({ listName: listNameDraft.trim(), giftAmount: giftAmountDraft === "" ? undefined : Number(giftAmountDraft), participants })) setShowEditList(false);
-                  }}
+                  type="submit"
                   className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
                   aria-label="Guardar"
                 >
                   <Check className="h-5 w-5" />
-                  <span className="sr-only">Guardar</span>
+                  <span>{remote.busy ? "Guardando..." : "Guardar"}</span>
                 </Button>
               </div>
             }
           >
             <fieldset disabled={remote.busy} className="space-y-3">
-              {remote.error && <p role="alert" className="text-sm text-red-700">{remote.error}</p>}
               <div>
                 <Label htmlFor="modal-list-name">Nombre de lista</Label>
-                <Input id="modal-list-name" value={listNameDraft} onChange={(e) => setListNameDraft(e.target.value)} placeholder="Ej: Oficina 2025" />
+                <Input ref={listNameRef} id="modal-list-name" maxLength={120} value={listNameDraft} onChange={(e) => { setListNameDraft(e.target.value); setListErrors((errors) => ({ ...errors, name: undefined })); }} placeholder="Ej: Oficina 2025" aria-invalid={!!listErrors.name} aria-describedby={listErrors.name ? "modal-list-name-error" : undefined} />
+                {listErrors.name && <p id="modal-list-name-error" role="alert" className="mt-1 text-sm text-red-700">{listErrors.name}</p>}
               </div>
               <div>
                 <Label htmlFor="modal-list-amount">Monto</Label>
                 <Input
                   id="modal-list-amount"
+                  ref={listAmountRef}
                   type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  max="9999999999.99"
                   value={giftAmountDraft}
-                  onChange={(e) => setGiftAmountDraft(e.target.value)}
+                  onChange={(e) => { setGiftAmountDraft(e.target.value); setListErrors((errors) => ({ ...errors, amount: undefined })); }}
                   placeholder="Ej: 20"
+                  aria-invalid={!!listErrors.amount}
+                  aria-describedby={listErrors.amount ? "modal-list-amount-error" : undefined}
                 />
+                {listErrors.amount && <p id="modal-list-amount-error" role="alert" className="mt-1 text-sm text-red-700">{listErrors.amount}</p>}
               </div>
             </fieldset>
           </Modal>
 
-          {/* Fixed bottom help link (animated with CTA) */}
-          <div
-            className={`fixed left-0 right-0 bottom-4 flex justify-center z-40 transition-all duration-400 ease-out ${
-              ctaVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
-            }`}
-            style={{ transitionDelay: ctaVisible ? "880ms" : "0ms" }}
-          >
+          <div className={flowComplete ? "w-full flex justify-center" : "fixed left-0 right-0 bottom-4 flex justify-center z-40"}>
             <Link
               href="/help"
               aria-label="Cómo funciona (ayuda)"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
+              className="inline-flex min-h-12 items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
             >
               <HelpCircle className="h-4 w-4 text-muted-foreground" />
               <span>Cómo funciona</span>

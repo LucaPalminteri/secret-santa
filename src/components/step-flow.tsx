@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, ArrowRight, Check } from "lucide-react";
+import { validateListDetails } from "@/utils/list-validation";
 
 type Props = {
   initialName?: string;
@@ -21,6 +21,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
   const [giftAmount, setGiftAmount] = useState<number | undefined>(initialAmount);
   const listRef = useRef<HTMLInputElement | null>(null);
   const amountRef = useRef<HTMLInputElement | null>(null);
+  const [amountError, setAmountError] = useState<string>();
 
   useEffect(() => {
     // focus the relevant input when step changes (opt-out via autoFocus)
@@ -32,20 +33,6 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
     }
   }, [step, autoFocus]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !busy) {
-        // Enter advances unless disabled
-        if (step === 0 && !listName.trim()) return;
-        if (step < 2) return setStep((s) => Math.min(2, s + 1));
-        // if on final step, complete
-        if (step === 2) onComplete(listName.trim(), giftAmount);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [step, listName, giftAmount, onComplete, busy]);
-
   const next = () => setStep((s) => Math.min(2, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
@@ -54,7 +41,18 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
   };
 
   return (
-    <div className="w-full max-w-full sm:max-w-2xl mx-auto p-2">
+    <form noValidate className="w-full max-w-full sm:max-w-2xl mx-auto p-2" onSubmit={(event) => {
+      event.preventDefault();
+      if (busy || !listName.trim()) return;
+      const errors = validateListDetails(listName, giftAmount);
+      if (errors.amount) {
+        setAmountError(errors.amount);
+        amountRef.current?.focus();
+        return;
+      }
+      if (step < 2) next();
+      else handleFinish();
+    }}>
       <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 text-gray-900 min-h-[180px] sm:min-h-[220px] max-h-[80vh] overflow-auto">
         <div className="mb-2 flex flex-col items-center">
           <div className="flex items-center justify-center space-x-3 mb-1">
@@ -74,7 +72,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
               className="flex transition-transform duration-700 ease-in-out"
               style={{ transform: `translate3d(-${step * 100}%, 0, 0)`, willChange: "transform" }}
             >
-              <div className="w-full flex-shrink-0 box-border px-2">
+              <div className="w-full flex-shrink-0 box-border px-2" inert={step !== 0} aria-hidden={step !== 0}>
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Nombre de la lista</h2>
                   <p className="text-sm text-gray-600 text-center">Pon un nombre que identifique este Secret Santa.</p>
@@ -85,6 +83,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                     <Input
                       ref={listRef}
                       id="sf-listName"
+                      maxLength={120}
                       value={listName}
                       onChange={(e) => setListName(e.target.value)}
                       placeholder="Ej: Oficina 2025"
@@ -95,7 +94,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                 </div>
               </div>
 
-              <div className="w-full flex-shrink-0 box-border px-2">
+              <div className="w-full flex-shrink-0 box-border px-2" inert={step !== 1} aria-hidden={step !== 1}>
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Monto del regalo</h2>
                   <p className="text-sm text-gray-600 text-center">Define un monto orientativo para todos los regalos.</p>
@@ -107,17 +106,24 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                       ref={amountRef}
                       id="sf-giftAmount"
                       type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      max="9999999999.99"
                       value={giftAmount ?? ""}
-                      onChange={(e) => setGiftAmount(e.target.value ? Number(e.target.value) : undefined)}
+                      onChange={(e) => { setGiftAmount(e.target.value ? Number(e.target.value) : undefined); setAmountError(undefined); }}
                       placeholder="Ej: 20"
                       className="bg-white"
                       aria-hidden={step !== 1}
+                      aria-invalid={!!amountError}
+                      aria-describedby={amountError ? "sf-amount-error" : undefined}
                     />
+                    {amountError && <p id="sf-amount-error" role="alert" className="text-sm text-red-700">{amountError}</p>}
                   </div>
                 </div>
               </div>
 
-              <div className="w-full flex-shrink-0 box-border px-2">
+              <div className="w-full flex-shrink-0 box-border px-2" inert={step !== 2} aria-hidden={step !== 2}>
                 <div className="space-y-3">
                   <h2 className="text-2xl font-extrabold text-gray-900 text-center">Listo</h2>
                   <p className="text-sm text-gray-600 text-center">Has completado la configuración básica. Continúa para añadir participantes.</p>
@@ -144,24 +150,21 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
               className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
               aria-label={step === 0 ? "Cancelar" : "Atrás"}
             >
-              {step === 0 ? <X className="h-5 w-5" /> : <ArrowLeft className="h-5 w-5" />}
-              <span className="sr-only">{step === 0 ? "Cancelar" : "Atrás"}</span>
+              <span>{step === 0 ? "Cancelar" : "Atrás"}</span>
             </Button>
 
             {step < 2 ? (
-              <Button onClick={next} disabled={busy || (step === 0 && !listName.trim())} className="flex-[2] py-2">
-                <ArrowRight className="h-5 w-5" />
-                <span className="sr-only">Siguiente</span>
+              <Button type="submit" disabled={busy || (step === 0 && !listName.trim())} className="flex-[2] py-2">
+                <span>Siguiente</span>
               </Button>
             ) : (
-              <Button disabled={busy} onClick={handleFinish} className="flex-[2] py-2">
-                <Check className="h-5 w-5" />
-                <span className="sr-only">Continuar</span>
+              <Button type="submit" disabled={busy} className="flex-[2] py-2">
+                <span>{busy ? "Guardando..." : "Continuar"}</span>
               </Button>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </form>
   );
 }

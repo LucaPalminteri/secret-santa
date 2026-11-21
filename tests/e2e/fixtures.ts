@@ -26,7 +26,7 @@ export async function createList(page: Page, budget?: string) {
   await page.getByRole("button", { name: "Siguiente" }).click();
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByText("No hay participantes", { exact: true })).toBeVisible();
-  await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
+  await waitForSaves(page);
 }
 
 export async function addParticipant(page: Page, name: string, email: string) {
@@ -35,4 +35,9 @@ export async function addParticipant(page: Page, name: string, email: string) {
   await dialog.getByLabel("Nombre", { exact: true }).fill(name);
   await dialog.getByLabel("Email", { exact: true }).fill(email);
   await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
+  await waitForSaves(page);
+}
+
+export async function waitForSaves(page: Page) {
+  await expect(page.getByRole("group", { name: "Intercambio", exact: true })).toHaveAttribute("aria-busy", "false");
 }

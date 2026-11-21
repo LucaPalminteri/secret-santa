@@ -1,4 +1,4 @@
-import { test, expect, createList, addParticipant } from "./fixtures";
+import { test, expect, createList, addParticipant, waitForSaves } from "./fixtures";
 
 test("requires a list name and allows cancelling setup", async ({ page }) => {
   await page.goto("/");
@@ -38,6 +38,7 @@ test("supports an optional budget and editing list details", async ({ page }) =>
   await dialog.getByLabel("Monto", { exact: true }).fill("15000");
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(dialog).toBeHidden();
+  await waitForSaves(page);
   await page.reload();
   await expect(page.getByText("Familia", { exact: true })).toBeVisible();
   await expect(page.getByText("Presupuesto: $15000", { exact: true })).toBeVisible();
@@ -55,11 +56,13 @@ test("adds, edits, persists, and removes a participant", async ({ page }) => {
   // Keeping the email unchanged must be allowed when editing its owner.
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(row).toContainText("Ana María");
+  await waitForSaves(page);
   await page.reload();
   row = page.getByRole("listitem").filter({ hasText: "ana@example.com" });
   await expect(row).toContainText("Ana María");
   await row.getByRole("button", { name: "Eliminar participante" }).click();
   await expect(page.getByText("No hay participantes", { exact: true })).toBeVisible();
+  await waitForSaves(page);
   await page.reload();
   await expect(page.getByText("No hay participantes", { exact: true })).toBeVisible();
 });
@@ -154,11 +157,10 @@ test("retries a committed save after a lost response without duplicating it", as
     await route.fallback();
   });
   await dialog.getByRole("button", { name: "Guardar" }).click();
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByLabel("Nombre de lista")).toHaveValue("Recovered save");
-  await expect(dialog.getByRole("button", { name: "Guardar" })).toBeEnabled();
-  await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(dialog).toBeHidden();
+  await expect(page.getByText("Recovered save", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Reintentar guardado" }).click();
+  await waitForSaves(page);
   expect(keys).toHaveLength(2);
   expect(keys[0]).toBe(keys[1]);
   await page.reload();
@@ -180,11 +182,14 @@ test("isolates anonymous browsers and rejects stale edits from another tab", asy
   await dialog.getByLabel("Nombre de lista").fill("Latest version");
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(dialog).toBeHidden();
+  await waitForSaves(page);
   await tab.getByRole("button", { name: "Editar lista" }).click();
   dialog = tab.getByRole("dialog", { name: "Editar lista" });
   await dialog.getByLabel("Nombre de lista").fill("Stale edit");
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(tab.getByText("La lista cambió en otra pestaña. Recarga antes de editar.")).toBeVisible();
+  await expect(dialog).toBeHidden();
+  await tab.getByRole("button", { name: "Editar lista" }).click();
   await expect(dialog.getByLabel("Nombre de lista")).toHaveValue("Stale edit");
   await page.reload();
   await expect(page.getByText("Latest version", { exact: true })).toBeVisible();

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Gift } from "lucide-react";
+import { Button } from "./ui/button";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -148,9 +149,9 @@ export default function AssignLoading({ open, messages = [], fullScreen = false,
       <div className="text-sm text-muted-foreground mb-4">Se enviaron los correos. Revisa la bandeja de entrada.</div>
 
       <div className="mt-4 flex justify-center">
-        <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md" onClick={() => onDone && onDone()}>
+        <Button onClick={() => onDone?.()}>
           Listo
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -160,9 +161,9 @@ export default function AssignLoading({ open, messages = [], fullScreen = false,
       <div className="text-2xl font-extrabold mb-2 text-red-600">Error</div>
       <div className="text-sm text-muted-foreground mb-4">{errorMessage || "Hubo un problema al realizar la asignación. Intenta nuevamente."}</div>
       <div className="mt-4 flex justify-center gap-2">
-        <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md" onClick={() => onDone && onDone()}>
+        <Button variant="destructive" onClick={() => onDone?.()}>
           Cerrar
-        </button>
+        </Button>
       </div>
     </div>
   );

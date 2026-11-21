@@ -108,8 +108,13 @@ Use `getDb()` from `src/db/index.ts` only in server-side Node.js code. It lazily
 creates a small connection pool and reuses it across development reloads.
 Database credentials are not required merely to build the app.
 
-The UI loads and saves through `/api/exchange`; confirming setup or an edit
-saves to Neon. Failed saves keep form values and can be retried. Revisions
+The UI loads and saves through `/api/exchange`. Setup and participant changes
+update the screen immediately, then save in the background. Saves run in sequence;
+newer edits stay visible while earlier requests finish. If a save fails, the draft
+remains editable and a recovery notice offers retry or an explicit return to the
+saved version. Pending edits live in memory: keep the page open until they save;
+the browser warns before leaving with unsaved changes. The draw waits for pending
+saves and reports success only after the server confirms sending. Revisions
 prevent stale tabs from overwriting newer saves, and save keys make retries
 idempotent after a lost response. Requests validate the anonymous cookie,
 expiration, ownership, input limits, and same-origin JSON writes. New sessions

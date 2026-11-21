@@ -20,7 +20,7 @@ export default function HelpPage() {
           </li>
           <li>
             <strong>Asignar:</strong> Pulsa <em>Asignar Secret Santas</em>. Verás una pantalla de espera festiva mientras se realiza la asignación. Si
-            la asignación termina correctamente, los datos locales se borrarán según la acción de finalización.
+            algún correo falla, podrás reintentarlo sin cambiar el sorteo. Los sorteos finalizados se conservan.
           </li>
           <li>
             <strong>Editar o eliminar:</strong> Puedes editar o eliminar participantes antes de asignar desde la lista de participantes.
@@ -28,7 +28,9 @@ export default function HelpPage() {
         </ol>
 
         <p className="mb-4 text-sm text-muted-foreground">
-          Los datos se guardan localmente en tu navegador (localStorage). No se comparten automáticamente con terceros.
+          La lista se guarda en nuestra base de datos alojada en Neon. Una cookie privada permite volver a abrirla en este navegador durante
+          90 días, sin crear una cuenta. Los nombres y correos se usan para organizar el sorteo y enviar las notificaciones a través del proveedor de correo.
+          Si borras las cookies o cambias de dispositivo, no podrás recuperar el acceso por ahora. Las listas antiguas de localStorage no se importan.
         </p>
 
         <div className="mt-6">

@@ -12,9 +12,10 @@ type Props = {
   onComplete: (listName: string, giftAmount?: number) => void;
   onCancel?: () => void;
   autoFocus?: boolean;
+  busy?: boolean;
 };
 
-export default function StepFlow({ initialName = "", initialAmount, onComplete, onCancel, autoFocus = true }: Props) {
+export default function StepFlow({ initialName = "", initialAmount, onComplete, onCancel, autoFocus = true, busy = false }: Props) {
   const [step, setStep] = useState<number>(0);
   const [listName, setListName] = useState<string>(initialName);
   const [giftAmount, setGiftAmount] = useState<number | undefined>(initialAmount);
@@ -33,7 +34,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" && !busy) {
         // Enter advances unless disabled
         if (step === 0 && !listName.trim()) return;
         if (step < 2) return setStep((s) => Math.min(2, s + 1));
@@ -43,7 +44,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [step, listName, giftAmount, onComplete]);
+  }, [step, listName, giftAmount, onComplete, busy]);
 
   const next = () => setStep((s) => Math.min(2, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
@@ -107,7 +108,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
                       id="sf-giftAmount"
                       type="number"
                       value={giftAmount ?? ""}
-                      onChange={(e) => setGiftAmount(e.target.value ? parseInt(e.target.value) : undefined)}
+                      onChange={(e) => setGiftAmount(e.target.value ? Number(e.target.value) : undefined)}
                       placeholder="Ej: 20"
                       className="bg-white"
                       aria-hidden={step !== 1}
@@ -138,6 +139,7 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
           <div className="flex gap-2">
             <Button
               variant="outline"
+              disabled={busy}
               onClick={step === 0 ? onCancel : back}
               className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
               aria-label={step === 0 ? "Cancelar" : "Atrás"}
@@ -147,12 +149,12 @@ export default function StepFlow({ initialName = "", initialAmount, onComplete, 
             </Button>
 
             {step < 2 ? (
-              <Button onClick={next} disabled={step === 0 && !listName.trim()} className="flex-[2] py-2">
+              <Button onClick={next} disabled={busy || (step === 0 && !listName.trim())} className="flex-[2] py-2">
                 <ArrowRight className="h-5 w-5" />
                 <span className="sr-only">Siguiente</span>
               </Button>
             ) : (
-              <Button onClick={handleFinish} className="flex-[2] py-2">
+              <Button disabled={busy} onClick={handleFinish} className="flex-[2] py-2">
                 <Check className="h-5 w-5" />
                 <span className="sr-only">Continuar</span>
               </Button>

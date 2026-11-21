@@ -12,9 +12,10 @@ type Props = {
   status: Status;
   duration?: number;
   onDone?: () => void;
+  errorMessage?: string;
 };
 
-export default function AssignLoading({ open, messages = [], fullScreen = false, status = "loading", duration = 3000, onDone }: Props) {
+export default function AssignLoading({ open, messages = [], fullScreen = false, status = "loading", duration = 3000, onDone, errorMessage }: Props) {
   const [idx, setIdx] = useState(0);
   const [progress, setProgress] = useState<number>(0);
   const progressRef = useRef<number>(0);
@@ -157,7 +158,7 @@ export default function AssignLoading({ open, messages = [], fullScreen = false,
   const ErrorView = (
     <div className="p-6 text-center">
       <div className="text-2xl font-extrabold mb-2 text-red-600">Error</div>
-      <div className="text-sm text-muted-foreground mb-4">Hubo un problema al realizar la asignación. Intenta nuevamente.</div>
+      <div className="text-sm text-muted-foreground mb-4">{errorMessage || "Hubo un problema al realizar la asignación. Intenta nuevamente."}</div>
       <div className="mt-4 flex justify-center gap-2">
         <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md" onClick={() => onDone && onDone()}>
           Cerrar

@@ -11,10 +11,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Gift, Pencil, Trash2, Plus, UserPlus, X, Check, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { assignSecretSantas } from "@/actions/actions";
+import { useExchange } from "@/hooks/use-exchange";
 import { Spinner } from "./spinner";
 import { validateEmail } from "@/utils/utils";
-import { loadSecretSantaData, saveSecretSantaData, clearSecretSantaData } from "@/utils/storage";
 import { Participant } from "@/utils/types";
 import StepFlow from "./step-flow";
 import Modal from "./modal";
@@ -22,7 +21,9 @@ import AssignLoading from "./assign-loading";
 
 export default function SecretSantaApp() {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [storageLoaded, setStorageLoaded] = useState(false);
+  const remote = useExchange();
+  const readOnly = remote.exchange?.status === "drawn";
+  const [assignError, setAssignError] = useState("");
   const [listName, setListName] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -37,18 +38,20 @@ export default function SecretSantaApp() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedData = loadSecretSantaData();
-    if (savedData) {
-      setParticipants(savedData.participants || []);
-      setListName(savedData.listName || "");
-      setGiftAmount(savedData.giftAmount ?? undefined);
-      // if savedData already has basic config, consider flow completed
-      if (savedData.listName || savedData.giftAmount !== undefined) {
-        setFlowComplete(true);
+    if (!remote.exchange) {
+      if (!remote.loading && !remote.loadError) {
+        setParticipants([]); setListName(""); setGiftAmount(undefined);
+        setFlowComplete(false); setFlowStarted(false);
+        setShowEditList(false); setShowAddParticipant(false);
       }
+      return;
     }
-    setStorageLoaded(true);
-  }, []);
+    setParticipants(remote.exchange.participants);
+    setListName(remote.exchange.listName || "");
+    setGiftAmount(remote.exchange.giftAmount);
+    setFlowComplete(true);
+    setFlowStarted(false);
+  }, [remote.exchange, remote.loading, remote.loadError]);
 
   useEffect(() => {
     // small delay to trigger the CTA mount animation
@@ -56,13 +59,7 @@ export default function SecretSantaApp() {
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    // Do not overwrite saved data with initial empty state during mounting.
-    if (!storageLoaded) return;
-    saveSecretSantaData({ participants, listName, giftAmount });
-  }, [participants, listName, giftAmount, storageLoaded]);
-
-  const addParticipant = () => {
+  const addParticipant = async () => {
     if (!name.trim()) {
       toast({
         title: "Error",
@@ -81,7 +78,7 @@ export default function SecretSantaApp() {
       return;
     }
 
-    if (!validateEmail(email)) {
+    if (!validateEmail(email.trim())) {
       toast({
         title: "Error",
         description: "Por favor, ingresa un correo electrónico válido.",
@@ -90,7 +87,7 @@ export default function SecretSantaApp() {
       return;
     }
 
-    const duplicateEmail = participants.some((p) => p.id !== editingId && p.email.toLowerCase() === email.toLowerCase());
+    const duplicateEmail = participants.some((p) => p.id !== editingId && p.email.toLowerCase() === email.trim().toLowerCase());
     if (duplicateEmail) {
       toast({
         title: "Error",
@@ -100,31 +97,17 @@ export default function SecretSantaApp() {
       return;
     }
 
-    if (editingId) {
-      setParticipants(participants.map((p) => (p.id === editingId ? { ...p, name, email } : p)));
+    const next = editingId
+      ? participants.map((p) => p.id === editingId ? { ...p, name: name.trim(), email: email.trim() } : p)
+      : [...participants, { id: uuidv4(), name: name.trim(), email: email.trim() }];
+    if (await remote.save({ participants: next, listName, giftAmount })) {
       setEditingId(null);
-      toast({
-        title: "Participante actualizado",
-        description: `${name} ha sido actualizado en la lista.`,
-      });
-    } else {
-      setParticipants([...participants, { id: uuidv4(), name, email }]);
-      toast({
-        title: "Participante agregado",
-        description: `${name} ha sido añadido a la lista.`,
-      });
+      setName(""); setEmail(""); setShowAddParticipant(false);
     }
-    setName("");
-    setEmail("");
   };
 
-  const removeParticipant = (id: string) => {
-    setParticipants(participants.filter((p) => p.id !== id));
-    toast({
-      title: "Participante eliminado",
-      description: "El participante ha sido removido de la lista.",
-      variant: "destructive",
-    });
+  const removeParticipant = async (id: string) => {
+    await remote.save({ participants: participants.filter((p) => p.id !== id), listName, giftAmount });
   };
 
   const handleEditParticipant = (id: string) => {
@@ -137,45 +120,19 @@ export default function SecretSantaApp() {
     }
   };
 
-  const handleAssign = async () => {
-    if (participants.length < 3) {
-      toast({
-        title: "Error",
-        description: "Se necesitan al menos 3 participantes para realizar el Secret Santa.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Show festive loading overlay and ensure a small intentional delay
-    const duration = 3000 + Math.floor(Math.random() * 2001); // 3s - 5s randomized
-    setAssignDuration(duration);
+  const handleAssign = async (retry: "failed" | "unknown" | null = null) => {
+    if (participants.length < 3 || remote.busy) return;
+    setAssignDuration(3000);
     setAssignStatus("loading");
     setIsAssigning(true);
-    const minDelay = duration;
-
+    setAssignError("");
     try {
-      // run assignment and minimum delay in parallel
-      await Promise.all([assignSecretSantas(participants, listName, giftAmount), new Promise((r) => setTimeout(r, minDelay))]);
-
-      // Assignment UI now shows a full-screen success state; toast here is redundant and removed.
-      // clear in-memory state and show success state in the single AssignLoading component
-      // persist/localStorage will be cleared when the user dismisses the success screen
-      // Do not mutate local in-memory state here. We defer clearing/persist changes
-      // until the user dismisses the AssignLoading success screen to avoid
-      // saving intermediate empty values (like giftAmount=0) into localStorage.
+      await remote.draw(retry);
       setAssignStatus("success");
-    } catch (error) {
-      console.log(error);
-      toast({
-        title: "Error en la asignación",
-        description: "Hubo un problema al asignar los Secret Santas. Por favor, inténtalo de nuevo.",
-        variant: "destructive",
-      });
+    } catch (failure) {
+      setAssignError(failure instanceof Error ? failure.message : "No se pudieron enviar los correos. Intenta nuevamente.");
       setAssignStatus("error");
-    }
-
-    setIsAssigning(false);
+    } finally { setIsAssigning(false); }
   };
 
   // loading overlay messages
@@ -188,6 +145,10 @@ export default function SecretSantaApp() {
 
   const resetApp = () => {
     setParticipants([]);
+    setShowAddParticipant(false);
+    setShowEditList(false);
+    setEditingId(null);
+    setName(""); setEmail("");
     setListName("");
     setGiftAmount(undefined);
     setFlowStarted(false);
@@ -213,6 +174,16 @@ export default function SecretSantaApp() {
     }
   }, [showAddParticipant, showEditList]);
 
+  if (remote.loading || remote.loadError) return (
+    <main className="min-h-dvh flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <p role="status">{remote.loading ? "Cargando tu lista..." : remote.loadError}</p>
+      {remote.loadError && <>
+        <Button onClick={() => void remote.load()}>Reintentar carga</Button>
+        <Button variant="outline" onClick={() => void remote.resetSession()}>Volver a empezar sin recuperar la lista anterior</Button>
+      </>}
+    </main>
+  );
+
   return (
     <>
       <Toaster />
@@ -223,17 +194,30 @@ export default function SecretSantaApp() {
           fullScreen
           status={assignStatus}
           duration={assignDuration}
-          onDone={() => {
-            // when user dismisses the success/error screen, if it was successful clear storage
+          errorMessage={assignError}
+          onDone={async () => {
             if (assignStatus === "success") {
-              clearSecretSantaData();
+              if (!await remote.finish()) {
+                toast({ title: "No se pudo cerrar la lista", description: "Pulsa Listo para reintentar. Los correos enviados no se repetirán.", variant: "destructive" });
+                return;
+              }
+              resetApp();
             }
             setAssignStatus("idle");
-            resetApp();
           }}
         />
       ) : (
         <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-2 sm:p-4 flex flex-col items-center justify-center gap-6">
+          <div className="text-center text-sm" aria-live="polite">
+            <p role="status">{remote.busy ? "Guardando cambios..." : remote.exchange ? "Guardado" : ""}</p>
+            {remote.error && !showAddParticipant && !showEditList && <div role="alert" className="text-red-700 space-y-2">
+              <p>{remote.error}</p>
+              {remote.hasPending && <Button variant="outline" disabled={remote.busy} onClick={async () => {
+                if (await remote.retrySave()) { setShowAddParticipant(false); setShowEditList(false); setEditingId(null); setName(""); setEmail(""); }
+              }}>Reintentar guardado</Button>}
+              <Button variant="outline" onClick={() => window.location.reload()}>Recargar lista guardada</Button>
+            </div>}
+          </div>
           <div className="relative w-full max-w-[720px] mx-auto h-auto px-1">
             {/* CTA (overlays with StepFlow) */}
             <div
@@ -299,11 +283,9 @@ export default function SecretSantaApp() {
                       onCancel={() => {
                         setFlowStarted(false);
                       }}
-                      onComplete={(name, amount) => {
-                        setListName(name);
-                        setGiftAmount(amount ?? undefined);
-                        setFlowComplete(true);
-                        setFlowStarted(false);
+                      busy={remote.busy}
+                      onComplete={async (name, amount) => {
+                        await remote.save({ listName: name, giftAmount: amount, participants: [] });
                       }}
                     />
                   </div>
@@ -312,7 +294,7 @@ export default function SecretSantaApp() {
             ) : null}
           </div>
           {flowComplete && (
-            <div className="w-full max-w-2xl mx-auto p-2 space-y-4">
+            <fieldset disabled={remote.busy} className="w-full max-w-2xl mx-auto p-2 space-y-4">
               {/* Card: List info (minimal) */}
               <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -321,11 +303,11 @@ export default function SecretSantaApp() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-lg font-semibold truncate">{listName || "Sin nombre de lista"}</div>
-                    <div className="text-xs text-muted-foreground">{giftAmount ? `Presupuesto: $${giftAmount}` : "Sin presupuesto definido"}</div>
+                    <div className="text-xs text-muted-foreground">{giftAmount !== undefined ? `Presupuesto: $${giftAmount}` : "Sin presupuesto definido"}</div>
                   </div>
                 </div>
                 <div>
-                  <Button variant="ghost" onClick={() => setShowEditList((s) => !s)} title="Editar lista">
+                  <Button variant="ghost" onClick={() => setShowEditList((s) => !s)} title="Editar lista" disabled={readOnly}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </div>
@@ -339,7 +321,7 @@ export default function SecretSantaApp() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-medium">Participantes</div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" onClick={() => setShowAddParticipant((s) => !s)} title="Agregar participante">
+                      <Button variant="ghost" onClick={() => setShowAddParticipant((s) => !s)} title="Agregar participante" disabled={readOnly}>
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -359,6 +341,7 @@ export default function SecretSantaApp() {
                       variant="ghost"
                       className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
                       aria-label="Agregar participante"
+                      disabled={readOnly}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -381,10 +364,10 @@ export default function SecretSantaApp() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)} aria-label="Editar participante">
+                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)} aria-label="Editar participante" disabled={readOnly}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" onClick={() => removeParticipant(p.id)} aria-label="Eliminar participante">
+                          <Button variant="ghost" onClick={() => removeParticipant(p.id)} aria-label="Eliminar participante" disabled={readOnly}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
@@ -398,10 +381,10 @@ export default function SecretSantaApp() {
               <div className="bg-white/95 rounded-xl shadow-sm p-4">
                 <div className="text-center">
                   <Button
-                    onClick={handleAssign}
-                    disabled={participants.length < 3 || isAssigning}
+                    onClick={() => void handleAssign()}
+                    disabled={participants.length < 3 || isAssigning || remote.busy || !!remote.error}
                     className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md disabled:opacity-60"
-                    aria-label="Asignar Secret Santas"
+                    aria-label={readOnly ? "Continuar envío de correos" : "Asignar Secret Santas"}
                   >
                     {isAssigning ? (
                       <>
@@ -411,21 +394,38 @@ export default function SecretSantaApp() {
                     ) : (
                       <>
                         <Gift className="h-5 w-5" />
-                        <span>Asignar Secret Santas</span>
+                        <span>{readOnly ? "Continuar envío de correos" : "Asignar Secret Santas"}</span>
                       </>
                     )}
                   </Button>
 
-                  <div className="mt-2 text-xs text-muted-foreground">Se necesitan al menos 3 participantes para asignar.</div>
+                  {readOnly ? <div className="mt-3 space-y-2 text-sm" role="status">
+                    <p>El sorteo está guardado. Las asignaciones no cambiarán.</p>
+                    <p>{remote.exchange?.delivery.sent} de {participants.length} correos enviados.</p>
+                    {!!remote.exchange?.delivery.failed && <Button variant="outline" onClick={() => void handleAssign("failed")}>Reintentar correos fallidos</Button>}
+                    {!!remote.exchange?.delivery.unknown && <div>
+                      <p>No pudimos confirmar algunos envíos. Reenviarlos puede duplicar esos correos, siempre con la misma asignación.</p>
+                      <Button variant="outline" onClick={() => void handleAssign("unknown")}>Reenviar correos sin confirmación</Button>
+                    </div>}
+                    {!!remote.exchange?.delivery.sending && <Button variant="outline" onClick={() => void remote.load()}>Actualizar estado de envíos</Button>}
+                    <p className="text-xs">Hasta 5 intentos por correo.</p>
+                    <p className="text-xs">Puedes cerrar este sorteo y crear otro. Los correos pendientes no se enviarán; un envío que ya está en curso puede terminar.</p>
+                    <Button variant="ghost" onClick={async () => { if (await remote.finish(false, true)) resetApp(); }}>Cerrar sorteo sin enviar los pendientes</Button>
+                  </div> : <>
+                    <div className="mt-2 text-xs text-muted-foreground">Se necesitan al menos 3 participantes para asignar.</div>
+                    <Button variant="ghost" onClick={async () => { if (await remote.finish(true)) resetApp(); }}>Descartar lista</Button>
+                  </>}
                 </div>
               </div>
-            </div>
+            </fieldset>
           )}
           {/* Modals */}
           <Modal
             open={showAddParticipant}
             onOpenChange={(open) => {
+              if (remote.busy) return;
               if (!open) {
+                remote.cancelEdit();
                 setShowAddParticipant(false);
                 setEditingId(null);
                 setName("");
@@ -440,7 +440,9 @@ export default function SecretSantaApp() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
+                  disabled={remote.busy}
                   onClick={() => {
+                    remote.cancelEdit();
                     setShowAddParticipant(false);
                     setEditingId(null);
                     setName("");
@@ -454,10 +456,8 @@ export default function SecretSantaApp() {
                 </Button>
 
                 <Button
-                  onClick={() => {
-                    addParticipant();
-                    setShowAddParticipant(false);
-                  }}
+                  disabled={remote.busy}
+                  onClick={() => void addParticipant()}
                   className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
                   aria-label={editingId ? "Guardar" : "Agregar"}
                 >
@@ -467,7 +467,8 @@ export default function SecretSantaApp() {
               </div>
             }
           >
-            <div className="space-y-3">
+            <fieldset disabled={remote.busy} className="space-y-3">
+              {remote.error && <p role="alert" className="text-sm text-red-700">{remote.error}</p>}
               <div>
                 <Label htmlFor="modal-name">Nombre</Label>
                 <Input ref={nameRef} id="modal-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
@@ -476,13 +477,15 @@ export default function SecretSantaApp() {
                 <Label htmlFor="modal-email">Email</Label>
                 <Input id="modal-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
               </div>
-            </div>
+            </fieldset>
           </Modal>
 
           <Modal
             open={showEditList}
             onOpenChange={(open) => {
+              if (remote.busy) return;
               if (!open) {
+                remote.cancelEdit();
                 setShowEditList(false);
                 setListNameDraft(listName);
                 setGiftAmountDraft(giftAmount ?? "");
@@ -496,7 +499,9 @@ export default function SecretSantaApp() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
+                  disabled={remote.busy}
                   onClick={() => {
+                    remote.cancelEdit();
                     setShowEditList(false);
                     setListNameDraft(listName);
                     setGiftAmountDraft(giftAmount ?? "");
@@ -509,10 +514,9 @@ export default function SecretSantaApp() {
                 </Button>
 
                 <Button
-                  onClick={() => {
-                    setListName(listNameDraft.trim());
-                    setGiftAmount(giftAmountDraft === "" ? undefined : Number(giftAmountDraft));
-                    setShowEditList(false);
+                  disabled={remote.busy}
+                  onClick={async () => {
+                    if (await remote.save({ listName: listNameDraft.trim(), giftAmount: giftAmountDraft === "" ? undefined : Number(giftAmountDraft), participants })) setShowEditList(false);
                   }}
                   className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
                   aria-label="Guardar"
@@ -523,7 +527,8 @@ export default function SecretSantaApp() {
               </div>
             }
           >
-            <div className="space-y-3">
+            <fieldset disabled={remote.busy} className="space-y-3">
+              {remote.error && <p role="alert" className="text-sm text-red-700">{remote.error}</p>}
               <div>
                 <Label htmlFor="modal-list-name">Nombre de lista</Label>
                 <Input id="modal-list-name" value={listNameDraft} onChange={(e) => setListNameDraft(e.target.value)} placeholder="Ej: Oficina 2025" />
@@ -538,7 +543,7 @@ export default function SecretSantaApp() {
                   placeholder="Ej: 20"
                 />
               </div>
-            </div>
+            </fieldset>
           </Modal>
 
           {/* Fixed bottom help link (animated with CTA) */}

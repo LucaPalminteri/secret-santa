@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import type { ExchangeData } from "@/server/validation";
 import type { SecretSantaData } from "@/utils/types";
 
@@ -54,7 +55,7 @@ export function useExchange() {
     if (locked.current || loading || loadError) return false;
     const fingerprint = JSON.stringify({ listName: data.listName, giftAmount: data.giftAmount ?? null, participants: data.participants });
     if (pending.current?.fingerprint !== fingerprint) {
-      pending.current = { fingerprint, input: { ...data, id: current.current?.id ?? crypto.randomUUID(), revision: current.current?.revision ?? 0, saveKey: crypto.randomUUID() } };
+      pending.current = { fingerprint, input: { ...data, id: current.current?.id ?? uuidv4(), revision: current.current?.revision ?? 0, saveKey: uuidv4() } };
     }
     locked.current = true; setBusy(true); setError("");
     try {

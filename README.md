@@ -62,6 +62,56 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
 
+## Database foundation (Neon + Drizzle)
+
+Add both Neon connection strings to `.env` or `.env.local` (local overrides `.env`):
+
+```env
+DATABASE_URL="<pooled Neon connection string>"
+DATABASE_URL_UNPOOLED="<direct Neon connection string>"
+```
+
+Both URLs target the same database. The application uses the pooled URL (the
+hostname contains `-pooler`); Drizzle Kit uses the direct URL for migrations.
+Keep Neon's TLS parameters. These are server secrets: never prefix them with
+`NEXT_PUBLIC_` or commit their values. Set the variables in your hosting
+provider's environment settings too.
+
+```bash
+npm run db:check      # Verify both connections with SELECT 1; hides credentials
+npm run db:generate   # Generate a SQL migration after editing src/db/schema.ts
+npm run db:migrate    # Apply pending migrations to the configured database
+npm run db:studio     # Browse the configured database locally
+```
+
+Review and commit generated migrations under `drizzle/`. Run migrations as a
+separate deployment step, rather than during requests or production builds.
+
+The initial schema has three tables:
+
+- `guest_sessions`: anonymous organizer IDs, unique session-token hashes, creation
+  and expiration timestamps. Generate a cryptographically random secret on the
+  server, store only its SHA-256 hash here, and put the secret in a secure,
+  HttpOnly cookie when the session flow is implemented.
+- `exchanges`: the owning guest session, list name, optional nonnegative budget,
+  and status (`draft` or `drawn`). Budgets use decimal storage and are returned
+  as strings by the database driver.
+- `participants`: names and emails belonging to an exchange. Email addresses
+  must be unique within each exchange, ignoring case.
+
+Deleting a guest session cascades to its exchanges and participants; deleting an
+exchange cascades to its participants. Expiration alone does not delete rows.
+
+Use `getDb()` from `src/db/index.ts` only in server-side Node.js code. It lazily
+creates a small connection pool and reuses it across development reloads.
+Database credentials are not required merely to build the app.
+
+This is the database foundation only. The UI still saves drafts in localStorage;
+anonymous cookies, recovery links, database-backed UI actions, and assignments
+are not implemented yet. Before exposing database reads or writes, each server
+action must validate the session's expiration and ownership of the exchange.
+Foreign keys alone do not authorize access.
+
 ## CI checks
 
 GitHub Actions runs three independent jobs on pushes and pull requests using

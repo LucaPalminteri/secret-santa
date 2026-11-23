@@ -453,11 +453,6 @@ export default function SecretSantaApp() {
                   {participants.length} participantes
                 </h2>
                 {roster}
-                <Button asChild variant="outline" className="mt-6 w-full">
-                  <Link href="/email-preview" target="_blank" rel="noopener noreferrer">
-                    Ver ejemplo del correo
-                  </Link>
-                </Button>
                 <div className="action-dock sticky bottom-0 -mx-6 mt-6 border-t border-border bg-background px-6 py-3">
                   <Button
                     className="reveal action-reveal w-full"
@@ -637,14 +632,6 @@ export default function SecretSantaApp() {
             className="inline-flex min-h-12 items-center text-sm text-muted-foreground underline-offset-4 hover:underline"
           >
             ¿Cómo funciona?
-          </Link>
-          <Link
-            href="/email-preview"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mx-auto flex min-h-12 w-fit items-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            Ver ejemplo del correo
           </Link>
         </footer>
       )}

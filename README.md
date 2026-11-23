@@ -294,8 +294,6 @@ npm run brand:build   # Rebuild web SVGs, email PNGs, and shared color tokens
 npm run email:preview # Write /tmp/secret-santa-email-preview.html with fictional data
 ```
 
-Open `/email-preview` (or choose **Ver ejemplo del correo** in the app footer or review screen) for a live preview with editable fictional names, an optional budget, and desktop/mobile views. Edits stay in the preview and do not create a draw or send messages.
-
 The preview renders only the email template; it never imports the SMTP transport
 or sends a message. Open the HTML file in a browser to inspect it. Browser rendering
 does not replace testing in actual email clients. Unit mail tests verify escaping,

@@ -97,8 +97,7 @@
     <!-- Continuous rounded beard; nose and moustache share a center line. -->
     <path d="M52 87c-6 19-1 37 12 47l21 15 21-15c13-10 18-28 12-47-9 2-14 7-18 13H70c-4-6-9-11-18-13Z" fill="#FFF9EF"/>
     <g class="santa-hat">
-      <path d="M53 59c0-25 14-40 39-40h17l25 25-8 11-27-15-9 21Z" fill="#B43D3D"/>
-      <path d="M97 39l27 15-5 5H88Z" fill="#963030"/>
+      <path d="M53 59c0-25 14-40 39-40h17l25 25-8 11c-10 0-20 6-33 6H61Z" fill="#B43D3D"/>
       <circle cx="134" cy="48" r="10" fill="#FFF9EF"/>
     </g>
     <path d="M51 57c20-6 48-6 68 0v15c-20-5-48-5-68 0Z" fill="#FFF9EF"/>

@@ -3,7 +3,7 @@
   "author": "Original code-authored SVG family, refined from the first approved visual study",
   "source": "src/brand/artwork.svg",
   "colors": "src/brand/colors.json",
-  "sourceSha256": "a1dce1a245477a2470f1dbeb86c3764c5c9324acafaef001b3b0be965b9ef1f1",
+  "sourceSha256": "4930c342b1e6d56c98fae6d7e2d5605cf24d62da67ac4f385d9c1e0abba01268",
   "build": "npm run brand:build",
   "web": [
     "illustrations/mark.svg",

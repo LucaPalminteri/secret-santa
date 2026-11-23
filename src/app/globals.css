@@ -76,12 +76,6 @@
   animation: participantEnter 170ms ease-out;
 }
 
-.dialog-backdrop {
-  animation: appEnter 180ms ease-out both;
-}
-.dialog-panel {
-  animation: stepEnter 240ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
 .welcome-title {
   font-size: clamp(2rem, 8vw, 2.5rem);
   font-weight: 800;
@@ -181,10 +175,13 @@
   .reveal,
   .welcome-enter > :not(.action-dock):not(form),
   .stagger-fields > *,
-  .dialog-backdrop,
-  .dialog-panel,
   .participant-enter {
     animation: none;
+  }
+  [data-vaul-drawer],
+  [data-vaul-overlay] {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
   .delivery-progress-fill {
     transition: none;

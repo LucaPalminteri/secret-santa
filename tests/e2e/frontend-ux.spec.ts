@@ -191,6 +191,70 @@ test("supports keyboard navigation and restores focus after editing", async ({
   await expect(opener).toBeFocused();
 });
 
+test("edits a participant in a bottom drawer while keeping the entry form", async ({
+  page,
+  isMobile,
+}) => {
+  const form = page.getByRole("form", { name: "Agregar participante" });
+  await form.getByLabel("Nombre").fill("Ana");
+  await form.getByLabel("Email").fill("ana@example.com");
+  await form.getByRole("button", { name: "Agregar participante" }).click();
+  await form.getByLabel("Nombre").fill("Próximo participante");
+  await form.getByLabel("Email").fill("proximo@example.com");
+
+  const opener = page.getByRole("button", { name: "Editar participante: Ana" });
+  const drawer = page.getByRole("dialog", { name: "Editar participante" });
+  const email = drawer.getByLabel("Email");
+  await opener.click();
+  await expect(drawer.getByLabel("Nombre")).toBeFocused();
+  await drawer.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+
+  const bounds = await drawer.boundingBox();
+  const viewport = page.viewportSize();
+  expect(bounds!.y + bounds!.height).toBeCloseTo(viewport!.height, 0);
+  if (isMobile) {
+    const handle = (await drawer.locator("[data-vaul-handle]").boundingBox())!;
+    const x = Math.round(handle.x + handle.width / 2);
+    const y = Math.round(handle.y + handle.height / 2);
+    const client = await page.context().newCDPSession(page);
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y }],
+    });
+    for (const distance of [25, 65, 120]) {
+      await client.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: y + distance }],
+      });
+    }
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await client.detach();
+  } else {
+    await drawer.getByRole("button", { name: "Cancelar" }).click();
+  }
+  await expect(drawer).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(form.getByLabel("Nombre")).toHaveValue("Próximo participante");
+  await expect(form.getByLabel("Email")).toHaveValue("proximo@example.com");
+
+  await opener.click();
+  await expect(email).toHaveValue("ana@example.com");
+  await email.fill("incorrecto");
+  await drawer.getByRole("button", { name: "Guardar" }).click();
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await expect(email).toBeFocused();
+  await email.fill("ana.nuevo@example.com");
+  await email.press("Enter");
+  await expect(drawer).toBeHidden();
+  await expect(page.getByText("ana.nuevo@example.com")).toBeVisible();
+  await expect(form.getByLabel("Email")).toHaveValue("proximo@example.com");
+});
+
 test("keeps forms and long participant details usable at 320px", async ({
   page,
 }, testInfo) => {

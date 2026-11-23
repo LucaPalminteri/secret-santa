@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { BrandIllustration } from "./brand";
@@ -14,7 +14,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Toaster } from "./ui/toaster";
-import Modal from "./modal";
+import EditDrawer from "./edit-drawer";
 import ExchangeDetailsForm from "./exchange-details-form";
 import AssignLoading from "./assign-loading";
 
@@ -22,6 +22,98 @@ const formatBudget = (amount?: number) =>
   amount === undefined
     ? "Sin presupuesto definido"
     : `ARS ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(amount)} por regalo`;
+
+type ParticipantDraft = {
+  name: string;
+  email: string;
+  errors: { name?: string; email?: string };
+};
+
+const emptyParticipant: ParticipantDraft = { name: "", email: "", errors: {} };
+
+function ParticipantFields({
+  draft,
+  onChange,
+  disabled,
+  className = "space-y-4",
+}: {
+  draft: ParticipantDraft;
+  onChange: (draft: ParticipantDraft) => void;
+  disabled: boolean;
+  className?: string;
+}) {
+  const id = useId();
+  const emailRef = useRef<HTMLInputElement>(null);
+  const { name, email, errors } = draft;
+
+  return (
+    <fieldset disabled={disabled} className={className}>
+      <div className="space-y-2">
+        <Label htmlFor={`${id}-name`}>Nombre</Label>
+        <Input
+          id={`${id}-name`}
+          name="name"
+          maxLength={100}
+          placeholder="Nombre y apellido"
+          autoComplete="section-participant name"
+          enterKeyHint="next"
+          value={name}
+          onChange={(event) => {
+            onChange({
+              ...draft,
+              name: event.target.value,
+              errors: { ...errors, name: undefined },
+            });
+          }}
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? `${id}-name-error` : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              emailRef.current?.focus();
+            }
+          }}
+        />
+        {errors.name && (
+          <p id={`${id}-name-error`} role="alert" className="field-error">
+            {errors.name}
+          </p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${id}-email`}>Email</Label>
+        <Input
+          ref={emailRef}
+          id={`${id}-email`}
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="section-participant email"
+          autoCapitalize="none"
+          spellCheck={false}
+          enterKeyHint="done"
+          maxLength={254}
+          placeholder="nombre@ejemplo.com"
+          value={email}
+          onChange={(event) => {
+            onChange({
+              ...draft,
+              email: event.target.value,
+              errors: { ...errors, email: undefined },
+            });
+          }}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? `${id}-email-error` : undefined}
+        />
+        {errors.email && (
+          <p id={`${id}-email-error`} role="alert" className="field-error">
+            {errors.email}
+          </p>
+        )}
+      </div>
+    </fieldset>
+  );
+}
 
 export default function SecretSantaApp() {
   const remote = useExchange();
@@ -31,13 +123,11 @@ export default function SecretSantaApp() {
   const readOnly = remote.exchange?.status === "drawn";
   const [setupStarted, setSetupStarted] = useState(false);
   const [reviewing, setReviewing] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [newParticipant, setNewParticipant] =
+    useState(emptyParticipant);
+  const [participantDraft, setParticipantDraft] =
+    useState(emptyParticipant);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [participantErrors, setParticipantErrors] = useState<{
-    name?: string;
-    email?: string;
-  }>({});
   const [announcement, setAnnouncement] = useState("");
   const [showEditList, setShowEditList] = useState(false);
   const [listNameDraft, setListNameDraft] = useState(listName);
@@ -52,8 +142,8 @@ export default function SecretSantaApp() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [assignError, setAssignError] = useState("");
-  const nameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const participantEditTrigger = useRef<HTMLButtonElement>(null);
+  const listEditTrigger = useRef<HTMLButtonElement>(null);
   const listNameRef = useRef<HTMLInputElement>(null);
   const listAmountRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -63,57 +153,50 @@ export default function SecretSantaApp() {
     !remote.loadError &&
     assignStatus === "idle";
 
-  useEffect(() => {
-    setListNameDraft(listName);
-    setGiftAmountDraft(giftAmount?.toString() ?? "");
-  }, [listName, giftAmount]);
-
-  function closeParticipantEditor() {
-    setEditingId(null);
-    setName("");
-    setEmail("");
-    setParticipantErrors({});
-  }
-
-  function addParticipant() {
+  function saveParticipant(form: HTMLFormElement, id: string | null) {
     if (remote.busy) return;
-    const errors: typeof participantErrors = {};
-    if (!name.trim()) errors.name = "Por favor, ingresa un nombre.";
-    if (!email.trim())
+    const draft = id ? participantDraft : newParticipant;
+    const name = draft.name.trim();
+    const email = draft.email.trim();
+    const errors: ParticipantDraft["errors"] = {};
+    if (!name) errors.name = "Por favor, ingresa un nombre.";
+    if (!email)
       errors.email = "Por favor, ingresa un correo electrónico.";
-    else if (!validateEmail(email.trim()))
+    else if (!validateEmail(email))
       errors.email = "Por favor, ingresa un correo electrónico válido.";
     if (
       participants.some(
         (person) =>
-          person.id !== editingId &&
-          person.email.toLowerCase() === email.trim().toLowerCase(),
+          person.id !== id &&
+          person.email.toLowerCase() === email.toLowerCase(),
       )
     )
       errors.email = "Este correo electrónico ya está registrado.";
-    if (!editingId && participants.length >= 50)
+    if (!id && participants.length >= 50)
       errors.name = "Se permiten hasta 50 participantes.";
-    setParticipantErrors(errors);
+
+    const { elements } = form;
+    const nameInput = elements.namedItem("name") as HTMLInputElement;
+    const emailInput = elements.namedItem("email") as HTMLInputElement;
     if (errors.name || errors.email) {
-      (errors.name ? nameRef : emailRef).current?.focus();
+      const setDraft = id ? setParticipantDraft : setNewParticipant;
+      setDraft({ ...draft, errors });
+      (errors.name ? nameInput : emailInput).focus();
       return;
     }
-    const next = editingId
+
+    const next = id
       ? participants.map((person) =>
-          person.id === editingId
-            ? { ...person, name: name.trim(), email: email.trim() }
-            : person,
+          person.id === id ? { ...person, name, email } : person,
         )
-      : [
-          ...participants,
-          { id: uuidv4(), name: name.trim(), email: email.trim() },
-        ];
+      : [...participants, { id: uuidv4(), name, email }];
     if (remote.save({ participants: next, listName, giftAmount })) {
-      setAnnouncement(
-        `${name.trim()} ${editingId ? "actualizado" : "agregado"}.`,
-      );
-      if (!editingId) nameRef.current?.focus();
-      closeParticipantEditor();
+      setAnnouncement(`${name} ${id ? "actualizado" : "agregado"}.`);
+      if (id) setEditingId(null);
+      else {
+        setNewParticipant(emptyParticipant);
+        nameInput.focus();
+      }
     }
   }
 
@@ -138,73 +221,9 @@ export default function SecretSantaApp() {
     setSetupStarted(false);
     setReviewing(false);
     setShowEditList(false);
-    closeParticipantEditor();
+    setEditingId(null);
+    setNewParticipant(emptyParticipant);
   }
-
-  const participantFields = (
-    <fieldset disabled={remote.busy} className="stagger-fields space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="participant-name">Nombre</Label>
-        <Input
-          ref={nameRef}
-          id="participant-name"
-          maxLength={100}
-          placeholder="Nombre y apellido"
-          autoComplete="section-participant name"
-          enterKeyHint="next"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setParticipantErrors((errors) => ({ ...errors, name: undefined }));
-          }}
-          aria-invalid={!!participantErrors.name}
-          aria-describedby={
-            participantErrors.name ? "participant-name-error" : undefined
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              emailRef.current?.focus();
-            }
-          }}
-        />
-        {participantErrors.name && (
-          <p id="participant-name-error" role="alert" className="field-error">
-            {participantErrors.name}
-          </p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="participant-email">Email</Label>
-        <Input
-          ref={emailRef}
-          id="participant-email"
-          type="email"
-          inputMode="email"
-          autoComplete="section-participant email"
-          autoCapitalize="none"
-          spellCheck={false}
-          enterKeyHint="done"
-          maxLength={254}
-          placeholder="nombre@ejemplo.com"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-            setParticipantErrors((errors) => ({ ...errors, email: undefined }));
-          }}
-          aria-invalid={!!participantErrors.email}
-          aria-describedby={
-            participantErrors.email ? "participant-email-error" : undefined
-          }
-        />
-        {participantErrors.email && (
-          <p id="participant-email-error" role="alert" className="field-error">
-            {participantErrors.email}
-          </p>
-        )}
-      </div>
-    </fieldset>
-  );
 
   const roster = (
     <ul aria-label="Lista de participantes" className="divide-y divide-border">
@@ -225,11 +244,15 @@ export default function SecretSantaApp() {
                 variant="ghost"
                 size="icon"
                 aria-label={`Editar participante: ${person.name}`}
-                onClick={() => {
-                  setParticipantErrors({});
+                aria-haspopup="dialog"
+                onClick={(event) => {
+                  participantEditTrigger.current = event.currentTarget;
+                  setParticipantDraft({
+                    name: person.name,
+                    email: person.email,
+                    errors: {},
+                  });
                   setEditingId(person.id);
-                  setName(person.name);
-                  setEmail(person.email);
                 }}
               >
                 <Pencil />
@@ -473,10 +496,14 @@ export default function SecretSantaApp() {
                     </p>
                   </div>
                   <Button
+                    ref={listEditTrigger}
                     variant="ghost"
                     disabled={readOnly}
                     aria-label="Editar lista"
+                    aria-haspopup="dialog"
                     onClick={() => {
+                      setListNameDraft(listName);
+                      setGiftAmountDraft(giftAmount?.toString() ?? "");
                       setListErrors({});
                       setShowEditList(true);
                     }}
@@ -507,17 +534,22 @@ export default function SecretSantaApp() {
                     </p>
                   )}
                 </div>
-                {!readOnly && !editingId && (
+                {!readOnly && (
                   <form
                     aria-label="Agregar participante"
                     noValidate
                     className="mb-5"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      addParticipant();
+                      saveParticipant(event.currentTarget, null);
                     }}
                   >
-                    {participantFields}
+                    <ParticipantFields
+                      draft={newParticipant}
+                      onChange={setNewParticipant}
+                      disabled={remote.busy}
+                      className="stagger-fields space-y-4"
+                    />
                     <Button
                       type="submit"
                       variant="outline"
@@ -635,45 +667,29 @@ export default function SecretSantaApp() {
           </Link>
         </footer>
       )}
-      <Modal
+      <EditDrawer
         open={!!editingId}
-        onOpenChange={(open) => {
-          if (!open && !remote.busy) closeParticipantEditor();
-        }}
+        onClose={() => setEditingId(null)}
+        triggerRef={participantEditTrigger}
         title="Editar participante"
-        description="Actualiza el nombre o el correo."
-        onSubmit={addParticipant}
-        footer={
-          <div className="flex gap-3">
-            <Button
-              className="flex-1"
-              variant="outline"
-              disabled={remote.busy}
-              onClick={closeParticipantEditor}
-            >
-              Cancelar
-            </Button>
-            <Button className="flex-1" type="submit" disabled={remote.busy}>
-              Guardar
-            </Button>
-          </div>
-        }
-      >
-        {editingId && participantFields}
-      </Modal>
-      <Modal
-        open={showEditList}
-        onOpenChange={(open) => {
-          if (!open && !remote.busy) {
-            setShowEditList(false);
-            setListNameDraft(listName);
-            setGiftAmountDraft(giftAmount?.toString() ?? "");
-          }
+        busy={remote.busy}
+        onSubmit={(form) => {
+          if (editingId) saveParticipant(form, editingId);
         }}
+      >
+        <ParticipantFields
+          draft={participantDraft}
+          onChange={setParticipantDraft}
+          disabled={remote.busy}
+        />
+      </EditDrawer>
+      <EditDrawer
+        open={showEditList}
+        onClose={() => setShowEditList(false)}
+        triggerRef={listEditTrigger}
         title="Editar lista"
-        description="Actualiza los datos del sorteo."
+        busy={remote.busy}
         onSubmit={() => {
-          if (remote.busy) return;
           const amount =
             giftAmountDraft === "" ? undefined : Number(giftAmountDraft);
           const errors = validateListDetails(listNameDraft, amount);
@@ -691,32 +707,13 @@ export default function SecretSantaApp() {
           )
             setShowEditList(false);
         }}
-        footer={
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              disabled={remote.busy}
-              className="flex-1"
-              onClick={() => {
-                setShowEditList(false);
-                setListNameDraft(listName);
-                setGiftAmountDraft(giftAmount?.toString() ?? "");
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button className="flex-1" type="submit" disabled={remote.busy}>
-              Guardar
-            </Button>
-          </div>
-        }
       >
         <fieldset disabled={remote.busy} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="modal-list-name">Nombre de lista</Label>
+            <Label htmlFor="edit-list-name">Nombre de lista</Label>
             <Input
               ref={listNameRef}
-              id="modal-list-name"
+              id="edit-list-name"
               maxLength={120}
               value={listNameDraft}
               onChange={(event) => {
@@ -733,10 +730,10 @@ export default function SecretSantaApp() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="modal-list-amount">Monto</Label>
+            <Label htmlFor="edit-list-amount">Monto</Label>
             <Input
               ref={listAmountRef}
-              id="modal-list-amount"
+              id="edit-list-amount"
               type="number"
               inputMode="decimal"
               step="0.01"
@@ -762,7 +759,7 @@ export default function SecretSantaApp() {
             )}
           </div>
         </fieldset>
-      </Modal>
+      </EditDrawer>
     </div>
   );
 }

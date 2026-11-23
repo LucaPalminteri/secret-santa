@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 115" width="320" height="230"><defs><symbol id="envelope" viewBox="0 0 160 115">
+          <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m8 36 71-30 73 30v67H8Z" fill="#E5EEDF" />
+            <path d="M28 16h104v70H28Z" fill="#FFF9EF" />
+            <path d="M8 36 80 80l72-44v67H8Z" fill="#f1e5cc" />
+            <path d="m8 103 51-39m93 39-52-39" fill="none" />
+          </g>
+          <circle cx="80" cy="75" r="12" fill="#B43D3D" />
+          <path d="m75 75 4 4 7-8" fill="none" stroke="#FFF9EF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        </symbol></defs><use href="#envelope" x="0" y="0" width="160" height="115"/></svg>

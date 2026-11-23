@@ -1,0 +1,40 @@
+{
+  "version": 3,
+  "author": "Original code-authored SVG family, refined from the first approved visual study",
+  "source": "src/brand/artwork.svg",
+  "colors": "src/brand/colors.json",
+  "sourceSha256": "7953675afe05ca7fc336a3bc284c00fdef9bb2d54038dbe85f8a82410197eb99",
+  "build": "npm run brand:build",
+  "web": [
+    "illustrations/mark.svg",
+    "illustrations/bow.svg",
+    "illustrations/gift.svg",
+    "illustrations/envelope.svg",
+    "illustrations/welcome.svg",
+    "illustrations/mail.svg",
+    "illustrations/help.svg"
+  ],
+  "email": [
+    {
+      "master": "illustrations/mark.svg",
+      "export": "email/mark.png",
+      "embedded": true
+    },
+    {
+      "master": "illustrations/bow.svg",
+      "export": "email/bow.png",
+      "embedded": true
+    },
+    {
+      "master": "illustrations/welcome.svg",
+      "export": "email/welcome.png",
+      "embedded": true
+    },
+    {
+      "master": "illustrations/mail.svg",
+      "export": "email/mail.png",
+      "embedded": true
+    }
+  ],
+  "notes": "The same gift, envelope, star, palette, and stroke treatment are reused across every scene. Storyset is retired and is not used by these exports. Email exports are embedded inline PNG attachments."
+}

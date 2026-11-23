@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 84" width="192" height="168"><defs><symbol id="bow" viewBox="0 0 96 84">
+  <path d="M40 0h16v84H40Z" fill="#B43D3D"/>
+  <path d="M0 32h96v14H0Z" fill="#B43D3D"/>
+  <path d="m45 38-28 36 18-5 7 9 10-35Z" fill="#B43D3D"/>
+  <path d="m49 38 20 27 1-13 16 2-32-21Z" fill="#963030"/>
+  <path d="M46 36C32 12 11 10 9 22c-2 13 20 23 37 14Z" fill="#B43D3D"/>
+  <path d="M46 36C31 33 19 20 11 20c-7 11 16 24 35 16Z" fill="#963030"/>
+  <path d="M50 35C59 7 78 3 83 13c7 14-14 29-33 22Z" fill="#B43D3D"/>
+  <path d="M50 35c17-3 26-20 32-24 9 13-13 31-32 24Z" fill="#963030"/>
+  <path d="M41 31c5-4 11-3 16 1l-1 13c-5 3-10 1-14-2Z" fill="#B43D3D"/>
+  <path d="m45 33-1 8m8-7 1 8M16 20c8 0 19 8 24 13M57 29c4-9 12-16 18-16" fill="none" stroke="#FFF9EF" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>
+</symbol></defs><use href="#bow" x="0" y="0" width="96" height="84"/></svg>

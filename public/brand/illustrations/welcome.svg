@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" width="720" height="520"><defs><symbol id="welcome" viewBox="0 0 360 260">
+          <path d="M37 223V72q0-23 23-23h240q23 0 23 23v151Z" fill="#E5EEDF" />
+          <path d="M24 224h312" stroke="#243D32" stroke-width="2" stroke-linecap="round" />
+          <path d="m284 75-29 46h17l-27 42h76l-26-42h17Z" fill="#2F5D46" />
+          <path d="M283 163v26" stroke="#243D32" stroke-width="4" stroke-linecap="round" />
+          <use href="#santa" x="60" y="0" width="180" height="240" />
+          <use href="#gift" x="235" y="144" width="85" height="93" />
+          <use href="#star" x="30" y="29" width="22" height="22" />
+          <use href="#star" x="258" y="22" width="19" height="19" />
+          <use href="#star" x="208" y="89" width="12" height="12" />
+          <circle cx="50" cy="130" r="3" fill="#B43D3D" />
+          <circle cx="333" cy="89" r="3" fill="#B43D3D" />
+        </symbol><symbol id="santa" viewBox="0 0 180 240">
+  <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Paired boots and relaxed mittens avoid the old disconnected limbs. -->
+    <path d="M58 201h20v28H43c-1-9 5-13 15-13Zm43 0h20v15c10 0 16 4 15 13h-35Z" fill="#243D32"/>
+    <path d="M61 116c-18 4-29 23-32 46l18 8 24-42m38-12c18 4 29 23 32 46l-18 8-24-42" fill="#B43D3D"/>
+    <path d="m28 157 22 8-4 13-22-8Zm114 0-22 8 4 13 22-8Z" fill="#FFF9EF"/>
+    <path d="M27 170c-10 5-10 22-1 25 9 3 17-9 16-19m101-6c10 5 10 22 1 25-9 3-17-9-16-19" fill="#2F5D46"/>
+    <path d="M61 115c-17 20-23 52-19 88 25 11 61 11 86 0 4-36-2-68-19-88Z" fill="#B43D3D"/>
+    <path d="M41 179h88v14H41Z" fill="#243D32"/>
+    <rect x="76" y="177" width="19" height="18" rx="2" fill="#E7BA61"/>
+    <ellipse cx="85" cy="83" rx="34" ry="34" fill="#E7B18F"/>
+    <!-- Continuous rounded beard; nose and moustache share a center line. -->
+    <path d="M52 87c-6 19-1 37 12 47l21 15 21-15c13-10 18-28 12-47-9 2-14 7-18 13H70c-4-6-9-11-18-13Z" fill="#FFF9EF"/>
+    <path d="M53 59c0-25 14-40 39-40h17l25 25-8 11-27-15-9 21Z" fill="#B43D3D"/>
+    <path d="M97 39l27 15-5 5H88Z" fill="#963030"/>
+    <path d="M51 57c20-6 48-6 68 0v15c-20-5-48-5-68 0Z" fill="#FFF9EF"/>
+    <circle cx="134" cy="48" r="10" fill="#FFF9EF"/>
+    <circle cx="69" cy="84" r="1.8" fill="#243D32" stroke="none"/>
+    <circle cx="101" cy="84" r="1.8" fill="#243D32" stroke="none"/>
+    <path d="M85 100c-10-9-21-7-24 3 9 5 18 3 24-3Zm0 0c10-9 21-7 24 3-9 5-18 3-24-3Z" fill="#FFF9EF"/>
+    <ellipse cx="85" cy="95" rx="8" ry="6" fill="#E7B18F"/>
+    <path d="M79 116q6 5 12 0" fill="none"/>
+  </g>
+</symbol>
+<symbol id="gift" viewBox="0 0 100 110">
+          <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 38h74v61H13z" fill="#FFF9EF" />
+            <path d="M8 31h84v19H8z" fill="#E5EEDF" />
+            <path d="M43 32h14v67H43z" fill="#B43D3D" />
+            <path d="M49 31C13 33 20 2 36 12c8 5 13 19 13 19Zm2 0C88 32 82 2 65 12c-8 5-14 19-14 19Z" fill="#B43D3D" />
+            <path d="m49 32-13 9m15-9 13 9" fill="none" />
+          </g>
+        </symbol>
+<symbol id="star" viewBox="0 0 24 24">
+          <path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z" fill="#E7BA61" />
+        </symbol>
+
+</defs><use href="#welcome" x="0" y="0" width="360" height="260"/></svg>

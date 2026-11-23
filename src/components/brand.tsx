@@ -17,7 +17,7 @@ export function BrandIllustration({
   };
   const [width, height] = dimensions[scene];
   const src = `/brand/illustrations/${scene}.svg`;
-  if (scene === "welcome" || scene === "gift") {
+  if (scene === "welcome" || scene === "gift" || scene === "help") {
     return (
       <picture className={className}>
         <source

@@ -63,9 +63,9 @@
 <symbol id="envelope" viewBox="0 0 160 115">
           <g stroke="{{ink}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="m8 36 71-30 73 30v67H8Z" fill="{{sage}}" />
-            <path d="M28 16h104v70H28Z" fill="{{paper}}" />
+            <path class="envelope-letter" d="M28 16h104v70H28Z" fill="{{paper}}" />
             <path d="M8 36 80 80l72-44v67H8Z" fill="#f1e5cc" />
-            <path d="m8 103 51-39m93 39-52-39" fill="none" />
+            <path d="M8 103 62 69M152 103 98 69" fill="none" />
           </g>
           <circle cx="80" cy="75" r="12" fill="{{cranberry}}" />
           <path d="m75 75 4 4 7-8" fill="none" stroke="{{paper}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
@@ -97,7 +97,7 @@
   <path d="M25 185h310" stroke="{{ink}}" stroke-width="2" stroke-linecap="round"/>
   <use href="#gift" x="53" y="86" width="88" height="97"/>
   <use href="#envelope" x="154" y="84" width="142" height="102"/>
-  <use href="#star" x="128" y="40" width="20" height="20"/>
-  <use href="#star" x="275" y="53" width="14" height="14"/>
+  <use class="help-star" href="#star" x="128" y="40" width="20" height="20"/>
+  <use class="help-star" href="#star" x="275" y="53" width="14" height="14"/>
 </symbol>
 </defs></svg>

@@ -32,7 +32,7 @@ export default function HelpPage() {
           <BrandIllustration
             scene="help"
             priority
-            className="mx-auto mb-6 h-44 w-full object-contain sm:h-52"
+            className="mx-auto mb-6 block h-44 w-full sm:h-52"
           />
           <h1 id="help-title" className="page-title">
             ¿Cómo funciona?

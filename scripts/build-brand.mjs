@@ -44,7 +44,11 @@ const exports = {
 };
 const svgDir = path.join(root, "public/brand/illustrations");
 const pngDir = path.join(root, "public/brand/email");
-const animatedScenes = ["welcome", "gift"];
+const sceneMotion = {
+  welcome: ["welcome"],
+  gift: ["gift"],
+  help: ["gift", "help"],
+};
 await Promise.all([
   mkdir(svgDir, { recursive: true }),
   mkdir(pngDir, { recursive: true }),
@@ -56,14 +60,16 @@ for (const [id, [width, height]] of Object.entries(exports)) {
   const [x, y, viewWidth, viewHeight] = symbol[2].split(/\s+/).map(Number);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol[2]}" width="${width}" height="${height}"><defs>${sceneDefinitions(id)}</defs><use href="#${id}" x="${x}" y="${y}" width="${viewWidth}" height="${viewHeight}"/></svg>`;
   await writeFile(path.join(svgDir, `${id}.svg`), svg);
-  if (animatedScenes.includes(id)) {
-    const motion = await readFile(
-      path.join(root, "src/brand", `${id}-motion.css`),
-      "utf8",
+  const motionLayers = sceneMotion[id];
+  if (motionLayers) {
+    const styles = await Promise.all(
+      motionLayers.map((layer) =>
+        readFile(path.join(root, "src/brand", `${layer}-motion.css`), "utf8"),
+      ),
     );
     await writeFile(
       path.join(svgDir, `${id}-animated.svg`),
-      svg.replace("<defs>", `<style>\n${motion}</style><defs>`),
+      svg.replace("<defs>", `<style>\n${styles.join("\n")}</style><defs>`),
     );
   }
   if (id === "mark" || id === "mail" || id === "welcome" || id === "bow") {
@@ -139,7 +145,7 @@ await writeFile(
       build: "npm run brand:build",
       web: [
         ...Object.keys(exports).map((id) => `illustrations/${id}.svg`),
-        ...animatedScenes.map((id) => `illustrations/${id}-animated.svg`),
+        ...Object.keys(sceneMotion).map((id) => `illustrations/${id}-animated.svg`),
       ],
       email: Object.keys(emailImages).map((id) => ({
         master: `illustrations/${id}.svg`,

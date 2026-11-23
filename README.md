@@ -58,9 +58,11 @@ This Secret Santa App is a web application built with Next.js and TypeScript. It
 
 2. Open your browser and navigate to `http://localhost:3000`
 
-3. Add participants by entering their names and email addresses
+3. Choose "Empezar" from the welcome screen. Enter the exchange name and an optional budget in ARS, then choose "Agregar participantes".
 
-4. Once you have at least 3 participants, click the "Asignar Secret Santas" button to randomly assign Secret Santas and send email notifications
+4. Add names and email addresses in the participant form. After each addition, the form clears and stays ready for the next person.
+
+5. With at least 3 participants, choose "Revisar sorteo" to check the roster, budget, and email addresses. Confirm with "Sortear y enviar correos" to save the draw and send the assignments.
 
 ## Database (Neon + Drizzle)
 
@@ -244,3 +246,33 @@ Notes
 ## License
 
 This project is licensed under the MIT License.
+
+## Brand artwork and email preview
+
+Colors live in `src/brand/colors.json`; the related vector illustrations live in
+`src/brand/artwork.svg`.
+
+```bash
+npm run brand:build   # Rebuild web SVGs, email PNGs, and shared color tokens
+npm run email:preview # Write /tmp/secret-santa-email-preview.html with fictional data
+```
+
+Open `/email-preview` (or choose **Ver ejemplo del correo** in the app footer or review screen) for a live preview with editable fictional names, an optional budget, and desktop/mobile views. Edits stay in the preview and do not create a draw or send messages.
+
+The preview renders only the email template; it never imports the SMTP transport
+or sends a message. Open the HTML file in a browser to inspect it. Browser rendering
+does not replace testing in actual email clients. Unit mail tests verify escaping,
+zero/optional budgets, embedded PNG attachments, and delivery failure classification.
+The font is self-hosted with its OFL license in `src/app/fonts/`.
+
+Illustrations use the original flat Christmas family in `src/brand/artwork.svg`.
+Santa, gifts, envelopes, and stars share the same palette and outlines. The web and
+email assets are built from those same masters; Storyset is not used by the current UI.
+Sending progress is based on confirmed delivery responses. Assignments are revealed
+only in recipient emails, never on the organizer completion screen.
+
+SVG.js (`@svgdotjs/svg.js`) controls the sending illustration on one shared timeline.
+It is dynamically imported only for sending, pauses in background tabs, and stops
+when the scene unmounts or reduced motion is enabled. Page entrances remain CSS
+animations. The browser sending-flow check covers movement, live progress, and
+reduced-motion changes without sending real mail.

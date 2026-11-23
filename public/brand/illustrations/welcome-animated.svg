@@ -110,11 +110,14 @@
 </symbol>
 <symbol id="gift" viewBox="0 0 100 110">
           <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M13 38h74v61H13z" fill="#FFF9EF" />
-            <path d="M8 31h84v19H8z" fill="#E5EEDF" />
-            <path d="M43 32h14v67H43z" fill="#B43D3D" />
-            <path d="M49 31C13 33 20 2 36 12c8 5 13 19 13 19Zm2 0C88 32 82 2 65 12c-8 5-14 19-14 19Z" fill="#B43D3D" />
-            <path d="m49 32-13 9m15-9 13 9" fill="none" />
+            <path d="M13 46h74v53H13z" fill="#FFF9EF" />
+            <path d="M43 46h14v53H43z" fill="#B43D3D" />
+            <g class="gift-lid">
+              <path d="M8 31h84v19H8z" fill="#E5EEDF" />
+              <path d="M43 51.2V32h14v19.2" fill="#B43D3D" stroke-linecap="butt" />
+              <path d="M49 31C13 33 20 2 36 12c8 5 13 19 13 19Zm2 0C88 32 82 2 65 12c-8 5-14 19-14 19Z" fill="#B43D3D" />
+              <path d="m49 32-13 9m15-9 13 9" fill="none" />
+            </g>
           </g>
         </symbol>
 <symbol id="star" viewBox="0 0 24 24">

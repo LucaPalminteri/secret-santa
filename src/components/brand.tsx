@@ -16,20 +16,22 @@ export function BrandIllustration({
     help: [360, 220],
   };
   const [width, height] = dimensions[scene];
-  if (scene === "welcome") {
+  const src = `/brand/illustrations/${scene}.svg`;
+  if (scene === "welcome" || scene === "gift") {
     return (
       <picture className={className}>
         <source
           media="(prefers-reduced-motion: no-preference)"
-          srcSet="/brand/illustrations/welcome-animated.svg"
+          srcSet={`/brand/illustrations/${scene}-animated.svg`}
         />
         <Image
-          src="/brand/illustrations/welcome.svg"
+          src={src}
           alt=""
           width={width}
           height={height}
           loading={priority ? "eager" : undefined}
           fetchPriority={priority ? "high" : undefined}
+          className="size-full object-contain"
         />
       </picture>
     );
@@ -37,7 +39,7 @@ export function BrandIllustration({
 
   return (
     <Image
-      src={`/brand/illustrations/${scene}.svg`}
+      src={src}
       alt=""
       width={width}
       height={height}

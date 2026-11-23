@@ -3,7 +3,7 @@
   "author": "Original code-authored SVG family, refined from the first approved visual study",
   "source": "src/brand/artwork.svg",
   "colors": "src/brand/colors.json",
-  "sourceSha256": "4930c342b1e6d56c98fae6d7e2d5605cf24d62da67ac4f385d9c1e0abba01268",
+  "sourceSha256": "be3bc4f6a41844b6d108bb263224add151a7d3cf9ad457ad992e86efb6080bcf",
   "build": "npm run brand:build",
   "web": [
     "illustrations/mark.svg",
@@ -13,7 +13,8 @@
     "illustrations/welcome.svg",
     "illustrations/mail.svg",
     "illustrations/help.svg",
-    "illustrations/welcome-animated.svg"
+    "illustrations/welcome-animated.svg",
+    "illustrations/gift-animated.svg"
   ],
   "email": [
     {

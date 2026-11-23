@@ -44,6 +44,10 @@ const exports = {
 };
 const svgDir = path.join(root, "public/brand/illustrations");
 const pngDir = path.join(root, "public/brand/email");
+const welcomeMotion = await readFile(
+  path.join(root, "src/brand/welcome-motion.css"),
+  "utf8",
+);
 await Promise.all([
   mkdir(svgDir, { recursive: true }),
   mkdir(pngDir, { recursive: true }),
@@ -55,6 +59,12 @@ for (const [id, [width, height]] of Object.entries(exports)) {
   const [x, y, viewWidth, viewHeight] = symbol[2].split(/\s+/).map(Number);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol[2]}" width="${width}" height="${height}"><defs>${sceneDefinitions(id)}</defs><use href="#${id}" x="${x}" y="${y}" width="${viewWidth}" height="${viewHeight}"/></svg>`;
   await writeFile(path.join(svgDir, `${id}.svg`), svg);
+  if (id === "welcome") {
+    await writeFile(
+      path.join(svgDir, "welcome-animated.svg"),
+      svg.replace("<defs>", `<style>\n${welcomeMotion}</style><defs>`),
+    );
+  }
   if (id === "mark" || id === "mail" || id === "welcome" || id === "bow") {
     const png = await sharp(Buffer.from(svg)).png().toBuffer();
     await writeFile(path.join(pngDir, `${id}.png`), png);
@@ -126,7 +136,10 @@ await writeFile(
       colors: "src/brand/colors.json",
       sourceSha256: createHash("sha256").update(source).digest("hex"),
       build: "npm run brand:build",
-      web: Object.keys(exports).map((id) => `illustrations/${id}.svg`),
+      web: [
+        ...Object.keys(exports).map((id) => `illustrations/${id}.svg`),
+        "illustrations/welcome-animated.svg",
+      ],
       email: Object.keys(emailImages).map((id) => ({
         master: `illustrations/${id}.svg`,
         export: `email/${id}.png`,

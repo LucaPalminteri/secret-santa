@@ -16,6 +16,25 @@ export function BrandIllustration({
     help: [360, 220],
   };
   const [width, height] = dimensions[scene];
+  if (scene === "welcome") {
+    return (
+      <picture className={className}>
+        <source
+          media="(prefers-reduced-motion: no-preference)"
+          srcSet="/brand/illustrations/welcome-animated.svg"
+        />
+        <Image
+          src="/brand/illustrations/welcome.svg"
+          alt=""
+          width={width}
+          height={height}
+          loading={priority ? "eager" : undefined}
+          fetchPriority={priority ? "high" : undefined}
+        />
+      </picture>
+    );
+  }
+
   return (
     <Image
       src={`/brand/illustrations/${scene}.svg`}

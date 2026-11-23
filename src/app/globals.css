@@ -83,10 +83,15 @@
   letter-spacing: -0.04em;
 }
 .welcome-art {
+  display: block;
   width: 100%;
   height: clamp(170px, 31dvh, 250px);
-  object-fit: contain;
   margin: 1rem auto 1.25rem;
+}
+.welcome-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .welcome-copy {
   max-width: 25rem;

@@ -1,0 +1,64 @@
+/* The raised mitten can extend past Santa's own viewBox. */
+#santa {
+  overflow: visible;
+}
+
+.santa-hat {
+  transform-origin: 85px 57px;
+  animation: welcome-breeze 6s ease-in-out 160ms infinite;
+  --sway-left: -6deg;
+  --sway-right: 8deg;
+}
+
+.welcome-tree {
+  transform-origin: 283px 189px;
+  animation: welcome-breeze 6s ease-in-out infinite;
+  --sway-left: -2deg;
+  --sway-right: 3deg;
+}
+
+@keyframes welcome-breeze {
+  0%, 100% { transform: rotate(0); }
+  33% { transform: rotate(var(--sway-right)); }
+  70% { transform: rotate(var(--sway-left)); }
+}
+
+.welcome-star {
+  animation: welcome-twinkle 4.8s ease-in-out infinite;
+}
+
+.welcome-star-top {
+  animation-delay: -1.6s;
+}
+
+.welcome-star-small {
+  animation-delay: -3.2s;
+}
+
+@keyframes welcome-twinkle {
+  0%, 100% { opacity: .72; }
+  50% { opacity: 1; }
+}
+
+.santa-wave {
+  transform-origin: 62px 122px;
+  animation: santa-wave 10s ease-in-out infinite;
+}
+
+/* Raise the arm, rock it twice, then let it rest until the next greeting. */
+@keyframes santa-wave {
+  0%, 15%, 42%, 100% { transform: rotate(0) scaleY(1); }
+  22%, 30% { transform: rotate(118deg) scaleY(1.16); }
+  26%, 34% { transform: rotate(98deg) scaleY(1.16); }
+}
+
+.santa-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: santa-blink 6s ease-in-out infinite;
+}
+
+@keyframes santa-blink {
+  0%, 20%, 24%, 100% { transform: scaleY(1); }
+  21.8%, 22.2% { transform: scaleY(.15); }
+}

@@ -5,7 +5,7 @@ import pg from "pg";
 
 config({ path: [".env.local", ".env"], quiet: true });
 const [suite, ...args] = process.argv.slice(2);
-if (!["integration", "e2e"].includes(suite)) throw new Error("Choose integration or e2e.");
+if (!["integration", "e2e", "e2e-production"].includes(suite)) throw new Error("Choose integration, e2e, or e2e-production.");
 let admin;
 let temporaryName;
 
@@ -35,6 +35,7 @@ try {
     throw new Error("Test database name must start with secret_santa_test; refusing to run against application data.");
   }
   const env = { ...process.env, TEST_DATABASE_URL: testUrl, DATABASE_URL: testUrl, DATABASE_URL_UNPOOLED: testUrl, EMAIL_USER: "", EMAIL_PASS: "" };
+  env.PLAYWRIGHT_PRODUCTION = suite === "e2e-production" ? "1" : "0";
   await run(process.execPath, ["node_modules/drizzle-kit/bin.cjs", "migrate"], env, true);
   const commandArgs = suite === "integration" ? ["node_modules/vitest/vitest.mjs", "run", "--config", "vitest.integration.config.mts"] : ["node_modules/@playwright/test/cli.js", "test"];
   await run(process.execPath, [...commandArgs, ...args], env);

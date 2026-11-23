@@ -21,10 +21,12 @@ export default defineConfig({
     { name: "mobile-chrome", use: { ...devices["Pixel 5"] } },
   ],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+    command: process.env.PLAYWRIGHT_PRODUCTION === "1"
+      ? "npm run build && npm run start -- --hostname 127.0.0.1 --port 3100"
+      : "npm run dev -- --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
     env: {
       PLAYWRIGHT_TEST: "1",
       // Override local credentials even when a .env file exists.

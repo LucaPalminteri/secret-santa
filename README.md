@@ -158,7 +158,8 @@ npm run typecheck   # Generate Next.js route types, then check TypeScript
 npm test           # Run unit tests
 npm run test:integration # Verify persistence and mocked delivery in isolated PostgreSQL
 npm run build      # Verify a production build
-npm run test:e2e   # Run browser tests
+npm run test:e2e   # Run browser tests against the development server
+npm run test:e2e:production # Build, then run browser tests against next start
 ```
 
 ESLint excludes generated build output and test reports. Type checking generates
@@ -177,7 +178,10 @@ npm test -- tests/unit/draft.test.ts    # Run a single file
 
 Vitest runs `tests/unit/**/*.test.ts` in Node, separately from Playwright.
 The unit tests cover server input validation, assignment invariants, HTML escaping,
-and notification failure classification. Email transport is mocked; unit tests
+notification failure classification, and the exchange HTTP boundary. Route tests
+check origin and body validation before session creation, proxy Host handling,
+delivery command validation, private cache headers, and sanitized service errors.
+Email transport is mocked; unit tests
 require no credentials or external services.
 
 Unit tests give fast feedback on business rules and edge cases. Keep the E2E
@@ -195,6 +199,7 @@ npx playwright install chromium
 
 ```bash
 npm run test:e2e          # Run all UI tests headlessly
+npm run test:e2e:production # Run the same suite against an isolated production build
 npm run test:e2e:ui       # Interactive runner: select, watch, and debug tests
 npm run test:e2e:headed   # Watch tests in a browser window
 npm run test:e2e:report   # Open the last HTML report
@@ -210,6 +215,8 @@ npm run test:e2e -- --grep "adds, edits"
 The runner starts and stops its own development server at
 `http://127.0.0.1:3100`, using `.next-e2e` for build output so it can run
 alongside your regular dev server. Port 3100 must be free.
+The production command builds into that same isolated `.next-e2e` directory and
+uses `next start`; CI runs this mode. Do not run the two browser modes together.
 Each browser test starts with fresh cookies. UI tests allow database requests,
 block draw/delivery requests, and run with empty email credentials. Integration
 tests mock the mail sender and verify sessions, ownership isolation, concurrent
@@ -227,6 +234,36 @@ used as test fixtures. CI provides its own PostgreSQL service.
 Add browser tests under `tests/e2e/` and import `test` and `expect` from `./fixtures`
 to preserve the email boundary. Prefer role and label locators. Failures save
 screenshots and traces in `test-results/`; reports are uploaded by CI for seven days.
+
+## Before releasing
+
+Run lint, typecheck, unit tests, integration tests, the production build, and
+`npm run test:e2e:production`. Require the PR's CI jobs to pass for the commit
+being released. Browser tests cover desktop Chromium and Android emulation;
+they do not verify Safari/iOS or actual inbox delivery.
+
+On an HTTPS preview deployment configured with a separate preview database:
+
+- Create a list, add/edit/remove participants, reload, and reopen the browser.
+  Confirm the saved draft returns. Check that another private browser session
+  cannot see it.
+- Use a real iPhone/Safari and Android browser to check keyboard behavior,
+  narrow layouts, review, and confirmation. Navigate through forms with a
+  keyboard and check focus, errors, and dialogs.
+- With only consenting, controlled test inboxes, complete one three-person draw.
+  Confirm each inbox receives one readable assignment, nobody draws themselves,
+  and each person appears once as recipient. Check Gmail/Outlook and a mobile
+  mail client, including images disabled, spam folders, and the optional budget.
+  This is a deliberate manual check: automated suites never send real mail.
+- Reload a finished draw and confirm it stays locked. Complete it and start a
+  new list. Check preview server logs for unexpected errors.
+
+Before production deployment, verify production environment variables, a database
+backup/restore option, and the migration plan. Apply reviewed pending migrations
+as a separate deployment step; rolling back code does not undo database changes.
+After deployment, check HTTPS, draft saving/reloading, and server errors. A local
+production build cannot verify hosting configuration, secure cookies through the
+hosting proxy, or production database/SMTP access.
 
 ## Contributing
 

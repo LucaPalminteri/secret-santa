@@ -26,7 +26,7 @@ const images = JSON.parse(
 const preview = html
   .replace("cid:secret-santa-bow", `data:image/png;base64,${images.bow}`)
   .replace("cid:secret-santa-mark", `data:image/png;base64,${images.mark}`)
-  .replace("cid:secret-santa-welcome", `data:image/png;base64,${images.welcome}`);
+  .replace("cid:secret-santa-welcome", `data:image/gif;base64,${images.welcome}`);
 const output = path.resolve(
   process.argv[2] || "/tmp/secret-santa-email-preview.html",
 );

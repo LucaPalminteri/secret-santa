@@ -29,8 +29,8 @@
       "embedded": true
     },
     {
-      "master": "illustrations/welcome.svg",
-      "export": "email/welcome.png",
+      "master": "illustrations/welcome-animated.svg",
+      "export": "email/welcome.gif",
       "embedded": true
     },
     {
@@ -39,5 +39,5 @@
       "embedded": true
     }
   ],
-  "notes": "The same gift, envelope, star, palette, and stroke treatment are reused across every scene. Storyset is retired and is not used by these exports. Email exports are embedded inline PNG attachments."
+  "notes": "The same gift, envelope, star, palette, and stroke treatment are reused across every scene. Storyset is retired and is not used by these exports. Email artwork uses inline PNGs and an animated welcome GIF."
 }

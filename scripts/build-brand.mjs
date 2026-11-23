@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { chromium } from "@playwright/test";
 import sharp from "sharp";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -43,15 +44,16 @@ const exports = {
   help: [640, 500],
 };
 const svgDir = path.join(root, "public/brand/illustrations");
-const pngDir = path.join(root, "public/brand/email");
+const emailDir = path.join(root, "public/brand/email");
 const sceneMotion = {
   welcome: ["welcome"],
   gift: ["gift"],
   help: ["gift", "help"],
 };
+const emailFormats = { mark: "png", bow: "png", welcome: "gif", mail: "png" };
 await Promise.all([
   mkdir(svgDir, { recursive: true }),
-  mkdir(pngDir, { recursive: true }),
+  mkdir(emailDir, { recursive: true }),
 ]);
 const emailImages = {};
 for (const [id, [width, height]] of Object.entries(exports)) {
@@ -61,27 +63,70 @@ for (const [id, [width, height]] of Object.entries(exports)) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol[2]}" width="${width}" height="${height}"><defs>${sceneDefinitions(id)}</defs><use href="#${id}" x="${x}" y="${y}" width="${viewWidth}" height="${viewHeight}"/></svg>`;
   await writeFile(path.join(svgDir, `${id}.svg`), svg);
   const motionLayers = sceneMotion[id];
+  let animatedSvg;
   if (motionLayers) {
     const styles = await Promise.all(
       motionLayers.map((layer) =>
         readFile(path.join(root, "src/brand", `${layer}-motion.css`), "utf8"),
       ),
     );
-    await writeFile(
-      path.join(svgDir, `${id}-animated.svg`),
-      svg.replace("<defs>", `<style>\n${styles.join("\n")}</style><defs>`),
-    );
+    animatedSvg = svg.replace("<defs>", `<style>\n${styles.join("\n")}</style><defs>`);
+    await writeFile(path.join(svgDir, `${id}-animated.svg`), animatedSvg);
   }
-  if (id === "mark" || id === "mail" || id === "welcome" || id === "bow") {
-    const png = await sharp(Buffer.from(svg)).png().toBuffer();
-    await writeFile(path.join(pngDir, `${id}.png`), png);
-    emailImages[id] = png.toString("base64");
-  }
+  const format = emailFormats[id];
+  if (!format) continue;
+  const image = format === "gif"
+    ? await renderWelcomeGif(animatedSvg, width, height)
+    : await sharp(Buffer.from(svg)).png().toBuffer();
+  await writeFile(path.join(emailDir, `${id}.${format}`), image);
+  emailImages[id] = image.toString("base64");
 }
 await writeFile(
   path.join(root, "src/brand/email-images.json"),
   JSON.stringify(emailImages, null, 2) + "\n",
 );
+
+async function renderWelcomeGif(svg, sourceWidth, sourceHeight) {
+  const width = 325;
+  const height = Math.round((width * sourceHeight) / sourceWidth);
+  const frameDelay = 100;
+  // Capture one wave and stop once Santa's arm is back at rest.
+  const duration = 4800;
+  const frames = [];
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width, height } });
+    await page.setContent(
+      `<style>
+        body { margin: 0; }
+        body > svg { display: block; width: 100vw; height: 100vh; }
+        svg * { animation-play-state: paused !important; }
+      </style>${svg}`,
+    );
+    await page.evaluate(() => {
+      const animations = document.getAnimations();
+      if (!animations.some((animation) => animation.animationName === "santa-wave")) {
+        throw new Error("The welcome SVG is missing Santa's wave");
+      }
+      // CSS delays also seek the rendered copies of symbols referenced by <use>.
+      for (const { effect } of animations) {
+        effect.target.style.animationDelay =
+          `calc(${effect.getTiming().delay}ms - var(--email-frame-time, 0ms))`;
+      }
+    });
+    for (let time = 0; time < duration; time += frameDelay) {
+      await page.evaluate((frameTime) => {
+        document.documentElement.style.setProperty("--email-frame-time", `${frameTime}ms`);
+      }, time);
+      frames.push(await page.screenshot({ omitBackground: true }));
+    }
+  } finally {
+    await browser.close();
+  }
+  return sharp(frames, { join: { animated: true } })
+    .gif({ delay: frames.map(() => frameDelay), loop: 1, dither: 0 })
+    .toBuffer();
+}
 
 function hsl(hex) {
   const [r, g, b] = hex.match(/[\da-f]{2}/gi).map((x) => parseInt(x, 16) / 255);
@@ -148,15 +193,15 @@ await writeFile(
         ...Object.keys(sceneMotion).map((id) => `illustrations/${id}-animated.svg`),
       ],
       email: Object.keys(emailImages).map((id) => ({
-        master: `illustrations/${id}.svg`,
-        export: `email/${id}.png`,
+        master: `illustrations/${id}${emailFormats[id] === "gif" ? "-animated" : ""}.svg`,
+        export: `email/${id}.${emailFormats[id]}`,
         embedded: true,
       })),
       notes:
-        "The same gift, envelope, star, palette, and stroke treatment are reused across every scene. Storyset is retired and is not used by these exports. Email exports are embedded inline PNG attachments.",
+        "The same gift, envelope, star, palette, and stroke treatment are reused across every scene. Storyset is retired and is not used by these exports. Email artwork uses inline PNGs and an animated welcome GIF.",
     },
     null,
     2,
   ) + "\n",
 );
-console.log("Built shared web artwork, email PNGs, and brand tokens.");
+console.log("Built shared web artwork, email images, and brand tokens.");

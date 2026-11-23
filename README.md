@@ -290,14 +290,17 @@ Colors live in `src/brand/colors.json`; the related vector illustrations live in
 `src/brand/artwork.svg`.
 
 ```bash
-npm run brand:build   # Rebuild web SVGs, email PNGs, and shared color tokens
+npx playwright install chromium # First-time setup for regenerating the email GIF
+npm run brand:build   # Rebuild web SVGs, email images, and shared color tokens
 npm run email:preview # Write /tmp/secret-santa-email-preview.html with fictional data
 ```
 
 The preview renders only the email template; it never imports the SMTP transport
 or sends a message. Open the HTML file in a browser to inspect it. Browser rendering
 does not replace testing in actual email clients. Unit mail tests verify escaping,
-zero/optional budgets, embedded PNG attachments, and delivery failure classification.
+zero/optional budgets, embedded image attachments, and delivery failure classification.
+The email GIF captures one wave from the web SVG. Clients that display a static
+frame still show the complete Santa illustration.
 The font is self-hosted with its OFL license in `src/app/fonts/`.
 
 Illustrations use the original flat Christmas family in `src/brand/artwork.svg`.

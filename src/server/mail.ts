@@ -69,7 +69,8 @@ export async function sendEmail(
           contentDisposition: "inline",
         },
         {
-          filename: "secret-santa-welcome.png",
+          filename: "secret-santa-welcome.gif",
+          contentType: "image/gif",
           content: Buffer.from(emailImages.welcome, "base64"),
           cid: "secret-santa-welcome",
           contentDisposition: "inline",

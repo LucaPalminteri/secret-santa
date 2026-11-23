@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const { sendMail } = vi.hoisted(() => ({ sendMail: vi.fn() }));
 vi.mock("server-only", () => ({}));
@@ -32,7 +33,7 @@ describe("email notifications", () => {
     expect(mail.text).toContain("ARS 0");
     expect(mail.messageId).toBe("<stable@example.invalid>");
   });
-  it("embeds the shared PNG artwork and keeps the assignment readable without images", async () => {
+  it("embeds the shared artwork and keeps the assignment readable without images", async () => {
     await sendEmail("a@example.com", "Ana", "María", []);
     const mail = sendMail.mock.calls[0][0];
     expect(mail.text).toContain("Te toca regalarle a: María");
@@ -43,10 +44,23 @@ describe("email notifications", () => {
     expect(mail.attachments).toHaveLength(3);
     for (const attachment of mail.attachments) {
       expect(mail.html).toContain(`cid:${attachment.cid}`);
-      expect(attachment.content.subarray(0, 8).toString("hex")).toBe(
-        "89504e470d0a1a0a",
-      );
+      if (attachment.cid !== "secret-santa-welcome") {
+        expect(attachment.content.subarray(0, 8).toString("hex")).toBe(
+          "89504e470d0a1a0a",
+        );
+      }
     }
+    const welcome = mail.attachments.find(
+      (attachment: { cid: string }) => attachment.cid === "secret-santa-welcome",
+    );
+    expect(welcome).toMatchObject({
+      filename: "secret-santa-welcome.gif",
+      contentType: "image/gif",
+      contentDisposition: "inline",
+    });
+    const animation = await sharp(welcome.content, { animated: true }).metadata();
+    expect(animation).toMatchObject({ format: "gif", loop: 1 });
+    expect(animation.pages).toBeGreaterThan(1);
   });
   it("reports explicit SMTP rejection as a retryable failure", async () => {
     sendMail.mockRejectedValue({ responseCode: 550 });

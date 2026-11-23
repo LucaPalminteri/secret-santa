@@ -1,41 +1,78 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { BrandIllustration } from "@/components/brand";
+import { Button } from "@/components/ui/button";
+
+const steps = [
+  {
+    title: "Prepara el sorteo",
+    text: "Ponle un nombre. El presupuesto es opcional.",
+  },
+  {
+    title: "Agrega a tu grupo",
+    text: "Mínimo 3 personas, con nombre y correo. Puedes editar la lista antes del sorteo.",
+  },
+  {
+    title: "Sortea y sorprende",
+    text: "Revisa los correos y confirma el envío. Cada persona recibe su asignación en privado.",
+  },
+];
 
 export default function HelpPage() {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-red-50 to-green-50 p-6 flex items-start sm:items-center justify-center">
-      <main className="w-full max-w-2xl text-gray-900">
-        <h1 className="text-2xl font-semibold mb-4">Cómo funciona</h1>
-
-        <p className="mb-4 text-sm text-muted-foreground">
-          Esta aplicación te ayuda a organizar un Secret Santa de forma rápida y sencilla. Aquí tienes los pasos básicos para usarla.
-        </p>
-
-        <ol className="list-decimal pl-5 space-y-3 mb-4 text-sm">
-          <li>
-            <strong>Crear lista:</strong> Pulsa <em>Empezar ahora</em> y configura el nombre de la lista y un presupuesto orientativo (opcional).
-          </li>
-          <li>
-            <strong>Añadir participantes:</strong> Abre &quot;Agregar participante&quot;, introduce nombre y correo. Se requieren al menos 3
-            participantes para hacer la asignación.
-          </li>
-          <li>
-            <strong>Asignar:</strong> Pulsa <em>Asignar Secret Santas</em>. Verás una pantalla de espera festiva mientras se realiza la asignación. Si
-            la asignación termina correctamente, los datos locales se borrarán según la acción de finalización.
-          </li>
-          <li>
-            <strong>Editar o eliminar:</strong> Puedes editar o eliminar participantes antes de asignar desde la lista de participantes.
-          </li>
-        </ol>
-
-        <p className="mb-4 text-sm text-muted-foreground">
-          Los datos se guardan localmente en tu navegador (localStorage). No se comparten automáticamente con terceros.
-        </p>
-
-        <div className="mt-6">
-          <Link href="/" className="text-sm text-red-600 hover:underline">
-            Volver a la app
+    <div className="app-shell min-h-dvh flex flex-col bg-background text-foreground">
+      <main className="mx-auto w-full max-w-xl flex-1 px-6 pt-6 pb-8 sm:pt-10">
+        <Button asChild variant="ghost" className="-ml-4 mb-4">
+          <Link href="/" aria-label="Volver a la app">
+            <ArrowLeft aria-hidden />
+            Volver
           </Link>
-        </div>
+        </Button>
+        <section className="welcome-enter" aria-labelledby="help-title">
+          <BrandIllustration
+            scene="help"
+            priority
+            className="mx-auto mb-6 block h-44 w-full sm:h-52"
+          />
+          <h1 id="help-title" className="page-title">
+            ¿Cómo funciona?
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            Tres pasos para compartir una sorpresa.
+          </p>
+          <ol className="mt-8 space-y-7">
+            {steps.map((step, index) => (
+              <li key={step.title} className="flex gap-4">
+                <span
+                  aria-hidden="true"
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-extrabold text-[var(--brand-pine)]"
+                >
+                  {index + 1}
+                </span>
+                <div>
+                  <h2 className="font-extrabold">{step.title}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {step.text}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-8 border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground">
+            <h2 className="font-extrabold text-foreground">
+              Tu lista se guarda sola
+            </h2>
+            <p className="mt-2">
+              Puedes volver desde el mismo navegador durante 90 días, sin crear
+              una cuenta. Si borras sus datos o cambias de dispositivo, no
+              podrás recuperar el acceso por ahora.
+            </p>
+            <p className="mt-3">
+              Si un correo falla, puedes reintentarlo sin cambiar las
+              asignaciones.
+            </p>
+          </div>
+        </section>
       </main>
     </div>
   );

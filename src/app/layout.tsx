@@ -3,21 +3,24 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+const nunitoSans = localFont({
+  src: "./fonts/NunitoSansLatin.woff2",
+  variable: "--font-nunito-sans",
+  weight: "400 800",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Secret Santa",
-  description: "Organize a Secret Santa gift exchange effortlessly with this app.",
-  keywords: ["Secret Santa", "Gift Exchange", "Holiday App", "Next.js Project", "Organize Gift Swaps"],
+  description:
+    "Organize a Secret Santa gift exchange effortlessly with this app.",
+  keywords: [
+    "Secret Santa",
+    "Gift Exchange",
+    "Holiday App",
+    "Next.js Project",
+    "Organize Gift Swaps",
+  ],
   authors: [
     {
       name: "Luca Palminteri",
@@ -27,7 +30,8 @@ export const metadata: Metadata = {
   // themeColor: "#FF0000",
   openGraph: {
     title: "Secret Santa",
-    description: "Organize a Secret Santa gift exchange effortlessly with this app.",
+    description:
+      "Organize a Secret Santa gift exchange effortlessly with this app.",
     url: "https://secret-santa-blue-six.vercel.app",
     type: "website",
     siteName: "Secret Santa App",
@@ -45,7 +49,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Secret Santa",
-    description: "Organize a Secret Santa gift exchange effortlessly with this app.",
+    description:
+      "Organize a Secret Santa gift exchange effortlessly with this app.",
     images: ["https://secret-santa-blue-six.vercel.app/santa.jpg"],
   },
   // viewport: "width=device-width, initial-scale=1.0",
@@ -61,8 +66,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="es">
+      <body className={`${nunitoSans.variable} antialiased`}>
         {children}
         <Analytics />
       </body>

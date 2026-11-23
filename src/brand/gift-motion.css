@@ -1,0 +1,9 @@
+.gift-lid {
+  transform-origin: 13px 49px;
+  animation: gift-open 4.8s ease-in-out infinite;
+}
+
+@keyframes gift-open {
+  0%, 18%, 78%, 100% { transform: rotate(0); }
+  40%, 54% { transform: rotate(-9deg); }
+}

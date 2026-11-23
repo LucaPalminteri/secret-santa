@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  env: {
-    EMAIL_USER: process.env.EMAIL_USER,
-    EMAIL_PASS: process.env.EMAIL_PASS,
-  },
+  distDir: process.env.PLAYWRIGHT_TEST === "1" ? ".next-e2e" : ".next",
 };
 
 export default nextConfig;

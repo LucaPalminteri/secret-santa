@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" width="640" height="500"><defs><symbol id="help" viewBox="0 0 360 220">
+  <path d="M37 184V63q0-22 22-22h242q22 0 22 22v121Z" fill="#E5EEDF"/>
+  <path d="M25 185h310" stroke="#243D32" stroke-width="2" stroke-linecap="round"/>
+  <use href="#gift" x="53" y="86" width="88" height="97"/>
+  <use href="#envelope" x="154" y="84" width="142" height="102"/>
+  <use class="help-star" href="#star" x="128" y="40" width="20" height="20"/>
+  <use class="help-star" href="#star" x="275" y="53" width="14" height="14"/>
+</symbol><symbol id="gift" viewBox="0 0 100 110">
+          <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 46h74v53H13z" fill="#FFF9EF" />
+            <path d="M43 46h14v53H43z" fill="#B43D3D" />
+            <g class="gift-lid">
+              <path d="M8 31h84v19H8z" fill="#E5EEDF" />
+              <path d="M43 51.2V32h14v19.2" fill="#B43D3D" stroke-linecap="butt" />
+              <path d="M49 31C13 33 20 2 36 12c8 5 13 19 13 19Zm2 0C88 32 82 2 65 12c-8 5-14 19-14 19Z" fill="#B43D3D" />
+              <path d="m49 32-13 9m15-9 13 9" fill="none" />
+            </g>
+          </g>
+        </symbol>
+<symbol id="envelope" viewBox="0 0 160 115">
+          <g stroke="#243D32" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m8 36 71-30 73 30v67H8Z" fill="#E5EEDF" />
+            <path class="envelope-letter" d="M28 16h104v70H28Z" fill="#FFF9EF" />
+            <path d="M8 36 80 80l72-44v67H8Z" fill="#f1e5cc" />
+            <path d="M8 103 62 69M152 103 98 69" fill="none" />
+          </g>
+          <circle cx="80" cy="75" r="12" fill="#B43D3D" />
+          <path d="m75 75 4 4 7-8" fill="none" stroke="#FFF9EF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        </symbol>
+<symbol id="star" viewBox="0 0 24 24">
+          <path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z" fill="#E7BA61" />
+        </symbol>
+</defs><use href="#help" x="0" y="0" width="360" height="220"/></svg>

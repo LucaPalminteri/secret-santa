@@ -1,0 +1,103 @@
+<!-- Original coordinated SVG family. Shared shapes and palette; no third-party illustration assets. -->
+<svg xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="mark" viewBox="0 0 32 32"><g fill="none" stroke="{{cranberry}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h20v14H6zM4 10h24v6H4zM16 10v18"/><path d="M16 10c-12 0-11-9-6-7 4 1 6 7 6 7Zm0 0c12 0 11-9 6-7-4 1-6 7-6 7Z"/></g></symbol>
+<symbol id="santa" viewBox="0 0 180 240">
+  <g stroke="{{ink}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Paired boots and relaxed mittens avoid the old disconnected limbs. -->
+    <path d="M58 201h20v28H43c-1-9 5-13 15-13Zm43 0h20v15c10 0 16 4 15 13h-35Z" fill="{{ink}}"/>
+    <g class="santa-wave">
+      <!-- The rounded shoulder extends under the coat as the sleeve rotates. -->
+      <path d="M61 116c-18 4-29 23-32 46l18 8 20-36c6-5 9-12 5-17-2-3-6-4-11-1Z" fill="{{cranberry}}"/>
+      <path d="M27 170c-10 5-10 22-1 25 9 3 17-9 16-19" fill="{{pine}}"/>
+      <path d="m28 157 22 8-4 13-22-8Z" fill="{{paper}}"/>
+    </g>
+    <path d="M109 116c18 4 29 23 32 46l-18 8-24-42" fill="{{cranberry}}"/>
+    <path d="m142 157-22 8 4 13 22-8Z" fill="{{paper}}"/>
+    <path d="M143 170c10 5 10 22 1 25-9 3-17-9-16-19" fill="{{pine}}"/>
+    <path d="M61 115c-17 20-23 52-19 88 25 11 61 11 86 0 4-36-2-68-19-88Z" fill="{{cranberry}}"/>
+    <path d="M41 179h88v14H41Z" fill="{{ink}}"/>
+    <rect x="76" y="177" width="19" height="18" rx="2" fill="{{gold}}"/>
+    <ellipse cx="85" cy="83" rx="34" ry="34" fill="#E7B18F"/>
+    <!-- Continuous rounded beard; nose and moustache share a center line. -->
+    <path d="M52 87c-6 19-1 37 12 47l21 15 21-15c13-10 18-28 12-47-9 2-14 7-18 13H70c-4-6-9-11-18-13Z" fill="{{paper}}"/>
+    <g class="santa-hat">
+      <path d="M53 59c0-25 14-40 39-40h17l25 25-8 11c-10 0-20 6-33 6H61Z" fill="{{cranberry}}"/>
+      <circle cx="134" cy="48" r="10" fill="{{paper}}"/>
+    </g>
+    <path d="M51 57c20-6 48-6 68 0v15c-20-5-48-5-68 0Z" fill="{{paper}}"/>
+    <circle class="santa-eye" cx="69" cy="84" r="1.8" fill="{{ink}}" stroke="none"/>
+    <circle class="santa-eye" cx="101" cy="84" r="1.8" fill="{{ink}}" stroke="none"/>
+    <path d="M85 100c-10-9-21-7-24 3 9 5 18 3 24-3Zm0 0c10-9 21-7 24 3-9 5-18 3-24-3Z" fill="{{paper}}"/>
+    <ellipse cx="85" cy="95" rx="8" ry="6" fill="#E7B18F"/>
+    <path d="M79 116q6 5 12 0" fill="none"/>
+  </g>
+</symbol>
+<symbol id="star" viewBox="0 0 24 24">
+          <path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z" fill="{{gold}}" />
+        </symbol>
+<!-- Ribbon crossing for the assignment letter: deliberately asymmetric loops and folded tails. -->
+<symbol id="bow" viewBox="0 0 96 84">
+  <path d="M40 0h16v84H40Z" fill="{{cranberry}}"/>
+  <path d="M0 32h96v14H0Z" fill="{{cranberry}}"/>
+  <path d="m45 38-28 36 18-5 7 9 10-35Z" fill="{{cranberry}}"/>
+  <path d="m49 38 20 27 1-13 16 2-32-21Z" fill="{{cranberryStrong}}"/>
+  <path d="M46 36C32 12 11 10 9 22c-2 13 20 23 37 14Z" fill="{{cranberry}}"/>
+  <path d="M46 36C31 33 19 20 11 20c-7 11 16 24 35 16Z" fill="{{cranberryStrong}}"/>
+  <path d="M50 35C59 7 78 3 83 13c7 14-14 29-33 22Z" fill="{{cranberry}}"/>
+  <path d="M50 35c17-3 26-20 32-24 9 13-13 31-32 24Z" fill="{{cranberryStrong}}"/>
+  <path d="M41 31c5-4 11-3 16 1l-1 13c-5 3-10 1-14-2Z" fill="{{cranberry}}"/>
+  <path d="m45 33-1 8m8-7 1 8M16 20c8 0 19 8 24 13M57 29c4-9 12-16 18-16" fill="none" stroke="{{paper}}" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>
+</symbol>
+<symbol id="gift" viewBox="0 0 100 110">
+          <g stroke="{{ink}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 46h74v53H13z" fill="{{paper}}" />
+            <path d="M43 46h14v53H43z" fill="{{cranberry}}" />
+            <g class="gift-lid">
+              <path d="M8 31h84v19H8z" fill="{{sage}}" />
+              <path d="M43 51.2V32h14v19.2" fill="{{cranberry}}" stroke-linecap="butt" />
+              <path d="M49 31C13 33 20 2 36 12c8 5 13 19 13 19Zm2 0C88 32 82 2 65 12c-8 5-14 19-14 19Z" fill="{{cranberry}}" />
+              <path d="m49 32-13 9m15-9 13 9" fill="none" />
+            </g>
+          </g>
+        </symbol>
+<symbol id="envelope" viewBox="0 0 160 115">
+          <g stroke="{{ink}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m8 36 71-30 73 30v67H8Z" fill="{{sage}}" />
+            <path class="envelope-letter" d="M28 16h104v70H28Z" fill="{{paper}}" />
+            <path d="M8 36 80 80l72-44v67H8Z" fill="#f1e5cc" />
+            <path d="M8 103 62 69M152 103 98 69" fill="none" />
+          </g>
+          <circle cx="80" cy="75" r="12" fill="{{cranberry}}" />
+          <path d="m75 75 4 4 7-8" fill="none" stroke="{{paper}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        </symbol>
+<symbol id="welcome" viewBox="0 0 360 260">
+          <path d="M37 223V72q0-23 23-23h240q23 0 23 23v151Z" fill="{{sage}}" />
+          <path d="M24 224h312" stroke="{{ink}}" stroke-width="2" stroke-linecap="round" />
+          <g class="welcome-tree">
+            <path d="m284 75-29 46h17l-27 42h76l-26-42h17Z" fill="{{pine}}" />
+            <path d="M283 163v26" stroke="{{ink}}" stroke-width="4" stroke-linecap="round" />
+          </g>
+          <circle cx="50" cy="130" r="3" fill="{{cranberry}}" />
+          <use href="#santa" x="60" y="0" width="180" height="240" />
+          <use href="#gift" x="235" y="144" width="85" height="93" />
+          <use class="welcome-star" href="#star" x="30" y="29" width="22" height="22" />
+          <use class="welcome-star welcome-star-top" href="#star" x="258" y="22" width="19" height="19" />
+          <use class="welcome-star welcome-star-small" href="#star" x="208" y="89" width="12" height="12" />
+          <circle cx="333" cy="89" r="3" fill="{{cranberry}}" />
+        </symbol>
+<symbol id="mail" viewBox="0 0 250 165">
+          <use href="#gift" x="18" y="8" width="90" height="99" />
+          <use href="#envelope" x="81" y="45" width="155" height="111" />
+          <use href="#star" x="173" y="10" width="19" height="19" />
+          <use href="#star" x="37" y="127" width="15" height="15" />
+          <path d="m212 29 8-8m-7 23h12" stroke="{{pine}}" stroke-width="2.4" stroke-linecap="round" />
+        </symbol>
+<symbol id="help" viewBox="0 0 360 220">
+  <path d="M37 184V63q0-22 22-22h242q22 0 22 22v121Z" fill="{{sage}}"/>
+  <path d="M25 185h310" stroke="{{ink}}" stroke-width="2" stroke-linecap="round"/>
+  <use href="#gift" x="53" y="86" width="88" height="97"/>
+  <use href="#envelope" x="154" y="84" width="142" height="102"/>
+  <use class="help-star" href="#star" x="128" y="40" width="20" height="20"/>
+  <use class="help-star" href="#star" x="275" y="53" width="14" height="14"/>
+</symbol>
+</defs></svg>

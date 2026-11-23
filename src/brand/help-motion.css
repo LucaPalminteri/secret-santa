@@ -1,0 +1,21 @@
+.envelope-letter {
+  animation: help-letter-rise 4.8s ease-in-out infinite;
+}
+
+@keyframes help-letter-rise {
+  0%, 46%, 92%, 100% { transform: translateY(0); }
+  63%, 75% { transform: translateY(-8px); }
+}
+
+.help-star {
+  animation: help-twinkle 4.8s ease-in-out infinite;
+}
+
+.help-star + .help-star {
+  animation-delay: -2.4s;
+}
+
+@keyframes help-twinkle {
+  0%, 100% { opacity: .72; }
+  50% { opacity: 1; }
+}

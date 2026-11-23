@@ -1,560 +1,765 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-// using simpler panel style for summary — card primitives not needed here
-// table UI not used in minimalist list
-import { Toaster } from "@/components/ui/toaster";
-import { Gift, Pencil, Trash2, Plus, UserPlus, X, Check, HelpCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { BrandIllustration } from "./brand";
 import Link from "next/link";
+import { useExchange } from "@/hooks/use-exchange";
 import { useToast } from "@/hooks/use-toast";
-import { assignSecretSantas } from "@/actions/actions";
-import { Spinner } from "./spinner";
 import { validateEmail } from "@/utils/utils";
-import { loadSecretSantaData, saveSecretSantaData, clearSecretSantaData } from "@/utils/storage";
-import { Participant } from "@/utils/types";
-import StepFlow from "./step-flow";
-import Modal from "./modal";
+import { validateListDetails } from "@/utils/list-validation";
+import { settleEntranceOnEnd, settleEntranceOnFocus } from "@/lib/entrance";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Toaster } from "./ui/toaster";
+import EditDrawer from "./edit-drawer";
+import ExchangeDetailsForm from "./exchange-details-form";
 import AssignLoading from "./assign-loading";
 
-export default function SecretSantaApp() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [listName, setListName] = useState<string>("");
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [giftAmount, setGiftAmount] = useState<number | undefined>(undefined);
-  const [isAssigning, setIsAssigning] = useState<boolean>(false);
-  const [assignStatus, setAssignStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [assignDuration, setAssignDuration] = useState<number>(3000);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [flowStarted, setFlowStarted] = useState<boolean>(false);
-  const [flowComplete, setFlowComplete] = useState<boolean>(false);
-  const [ctaVisible, setCtaVisible] = useState<boolean>(false);
-  const { toast } = useToast();
+const formatBudget = (amount?: number) =>
+  amount === undefined
+    ? "Sin presupuesto definido"
+    : `ARS ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(amount)} por regalo`;
 
-  useEffect(() => {
-    const savedData = loadSecretSantaData();
-    if (savedData) {
-      setParticipants(savedData.participants || []);
-      setListName(savedData.listName || "");
-      setGiftAmount(savedData.giftAmount ?? undefined);
-      // if savedData already has basic config, consider flow completed
-      if (savedData.listName || savedData.giftAmount !== undefined) {
-        setFlowComplete(true);
-      }
-    }
-  }, []);
+type ParticipantDraft = {
+  name: string;
+  email: string;
+  errors: { name?: string; email?: string };
+};
 
-  useEffect(() => {
-    // small delay to trigger the CTA mount animation
-    const t = setTimeout(() => setCtaVisible(true), 80);
-    return () => clearTimeout(t);
-  }, []);
+const emptyParticipant: ParticipantDraft = { name: "", email: "", errors: {} };
 
-  useEffect(() => {
-    saveSecretSantaData({ participants, listName, giftAmount });
-  }, [participants, listName, giftAmount]);
-
-  const addParticipant = () => {
-    if (!name.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un nombre.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!email.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un correo electrónico.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      toast({
-        title: "Error",
-        description: "Por favor, ingresa un correo electrónico válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const duplicateEmail = participants.some((p) => p.email.toLowerCase() === email.toLowerCase());
-    if (duplicateEmail) {
-      toast({
-        title: "Error",
-        description: "Este correo electrónico ya está registrado.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editingId) {
-      setParticipants(participants.map((p) => (p.id === editingId ? { ...p, name, email } : p)));
-      setEditingId(null);
-      toast({
-        title: "Participante actualizado",
-        description: `${name} ha sido actualizado en la lista.`,
-      });
-    } else {
-      setParticipants([...participants, { id: uuidv4(), name, email }]);
-      toast({
-        title: "Participante agregado",
-        description: `${name} ha sido añadido a la lista.`,
-      });
-    }
-    setName("");
-    setEmail("");
-  };
-
-  const removeParticipant = (id: string) => {
-    setParticipants(participants.filter((p) => p.id !== id));
-    toast({
-      title: "Participante eliminado",
-      description: "El participante ha sido removido de la lista.",
-      variant: "destructive",
-    });
-  };
-
-  const handleEditParticipant = (id: string) => {
-    const participant = participants.find((p) => p.id === id);
-    if (participant) {
-      setEditingId(id);
-      setName(participant.name);
-      setEmail(participant.email);
-      setShowAddParticipant(true);
-    }
-  };
-
-  const handleAssign = async () => {
-    if (participants.length < 3) {
-      toast({
-        title: "Error",
-        description: "Se necesitan al menos 3 participantes para realizar el Secret Santa.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Show festive loading overlay and ensure a small intentional delay
-    const duration = 3000 + Math.floor(Math.random() * 2001); // 3s - 5s randomized
-    setAssignDuration(duration);
-    setAssignStatus("loading");
-    setIsAssigning(true);
-    const minDelay = duration;
-
-    try {
-      // run assignment and minimum delay in parallel
-      await Promise.all([assignSecretSantas(participants, listName, giftAmount), new Promise((r) => setTimeout(r, minDelay))]);
-
-      // Assignment UI now shows a full-screen success state; toast here is redundant and removed.
-      // clear in-memory state and show success state in the single AssignLoading component
-      // persist/localStorage will be cleared when the user dismisses the success screen
-      // Do not mutate local in-memory state here. We defer clearing/persist changes
-      // until the user dismisses the AssignLoading success screen to avoid
-      // saving intermediate empty values (like giftAmount=0) into localStorage.
-      setAssignStatus("success");
-    } catch (error) {
-      console.log(error);
-      toast({
-        title: "Error en la asignación",
-        description: "Hubo un problema al asignar los Secret Santas. Por favor, inténtalo de nuevo.",
-        variant: "destructive",
-      });
-      setAssignStatus("error");
-    }
-
-    setIsAssigning(false);
-  };
-
-  // loading overlay messages
-  const assignMessages = [
-    "Se están barajando los nombres...",
-    "Preparando los sobres virtuales...",
-    "Mirando la lista dos veces...",
-    "¡Casi listo! Enviando notificaciones...",
-  ];
-
-  const resetApp = () => {
-    setParticipants([]);
-    setListName("");
-    setGiftAmount(undefined);
-    setFlowStarted(false);
-    setFlowComplete(false);
-  };
-
-  // local UI state for minimalist cards + modal
-  const [showEditList, setShowEditList] = useState<boolean>(false);
-  const [listNameDraft, setListNameDraft] = useState<string>(listName);
-  const [giftAmountDraft, setGiftAmountDraft] = useState<number | string>(giftAmount ?? "");
-  const [showAddParticipant, setShowAddParticipant] = useState<boolean>(false);
-  const nameRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    setListNameDraft(listName);
-    setGiftAmountDraft(giftAmount ?? "");
-  }, [flowComplete, listName, giftAmount]);
-
-  useEffect(() => {
-    if (showAddParticipant || showEditList) {
-      // small delay to ensure modal mounts
-      setTimeout(() => nameRef.current?.focus(), 50);
-    }
-  }, [showAddParticipant, showEditList]);
+function ParticipantFields({
+  draft,
+  onChange,
+  disabled,
+  className = "space-y-4",
+}: {
+  draft: ParticipantDraft;
+  onChange: (draft: ParticipantDraft) => void;
+  disabled: boolean;
+  className?: string;
+}) {
+  const id = useId();
+  const emailRef = useRef<HTMLInputElement>(null);
+  const { name, email, errors } = draft;
 
   return (
-    <>
-      <Toaster />
-      {assignStatus !== "idle" ? (
-        <AssignLoading
-          open={true}
-          messages={assignMessages}
-          fullScreen
-          status={assignStatus}
-          duration={assignDuration}
-          onDone={() => {
-            // when user dismisses the success/error screen, if it was successful clear storage
-            if (assignStatus === "success") {
-              clearSecretSantaData();
+    <fieldset disabled={disabled} className={className}>
+      <div className="space-y-2">
+        <Label htmlFor={`${id}-name`}>Nombre</Label>
+        <Input
+          id={`${id}-name`}
+          name="name"
+          maxLength={100}
+          placeholder="Nombre y apellido"
+          autoComplete="section-participant name"
+          enterKeyHint="next"
+          value={name}
+          onChange={(event) => {
+            onChange({
+              ...draft,
+              name: event.target.value,
+              errors: { ...errors, name: undefined },
+            });
+          }}
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? `${id}-name-error` : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              emailRef.current?.focus();
             }
-            setAssignStatus("idle");
-            resetApp();
           }}
         />
-      ) : (
-        <div className="min-h-dvh bg-gradient-to-b from-red-100 to-green-100 p-2 sm:p-4 flex flex-col items-center justify-center gap-6">
-          <div className="relative w-full max-w-[720px] mx-auto h-auto px-1">
-            {/* CTA (overlays with StepFlow) */}
-            <div
-              className={`absolute inset-0 flex items-center justify-center
-                ${
-                  flowStarted || flowComplete
-                    ? "opacity-0 pointer-events-none cta-exit"
-                    : ctaVisible
-                    ? "opacity-100 translate-y-0 cta-entrance"
-                    : "opacity-0 translate-y-4"
-                }`}
-            >
-              <div
-                className="relative w-full px-4 py-10 text-center"
-                style={
-                  {
-                    // custom stagger timings for CTA micro-animations
-                    // title, subtitle, buttons, and blob can be tuned here
-                    "--cta-title-delay": "180ms",
-                    "--cta-sub-delay": "340ms",
-                    "--cta-buttons-delay": "540ms",
-                    "--cta-btn-primary-delay": "700ms",
-                    "--cta-btn-ghost-delay": "820ms",
-                    "--cta-blob-delay": "60ms",
-                  } as React.CSSProperties
-                }
-              >
-                {/* decorative blob */}
-                <div
-                  className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/3 w-[min(60vw,380px)] h-[min(60vw,380px)] rounded-full bg-gradient-to-r from-pink-300 to-amber-200 opacity-30 blur-2xl pointer-events-none ${
-                    ctaVisible ? "cta-blob" : ""
-                  }`}
-                  aria-hidden
-                />
-                <div className="relative z-10">
-                  <h1 className={`text-3xl sm:text-4xl font-extrabold mb-3 ${ctaVisible ? "cta-title" : "opacity-0"}`}>Secret Santa</h1>
-                  <p className={`text-sm sm:text-base mb-6 max-w-lg mx-auto text-muted-foreground ${ctaVisible ? "cta-sub" : "opacity-0"}`}>
-                    Organiza intercambios con un flujo limpio y guiado. Empieza en segundos desde tu móvil.
-                  </p>
-                  <div className={`flex flex-col sm:flex-row items-center justify-center ${ctaVisible ? "cta-buttons" : "opacity-0"} gap-3 sm:gap-5`}>
-                    <Button
-                      onClick={() => setFlowStarted(true)}
-                      className="cta-btn-primary w-full sm:w-auto px-6 py-3 text-base sm:text-lg transform transition-all duration-300 hover:scale-105 bg-gradient-to-r from-red-500 to-pink-500 text-white"
-                    >
-                      Empezar ahora
-                    </Button>
-                  </div>
+        {errors.name && (
+          <p id={`${id}-name-error`} role="alert" className="field-error">
+            {errors.name}
+          </p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${id}-email`}>Email</Label>
+        <Input
+          ref={emailRef}
+          id={`${id}-email`}
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="section-participant email"
+          autoCapitalize="none"
+          spellCheck={false}
+          enterKeyHint="done"
+          maxLength={254}
+          placeholder="nombre@ejemplo.com"
+          value={email}
+          onChange={(event) => {
+            onChange({
+              ...draft,
+              email: event.target.value,
+              errors: { ...errors, email: undefined },
+            });
+          }}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? `${id}-email-error` : undefined}
+        />
+        {errors.email && (
+          <p id={`${id}-email-error`} role="alert" className="field-error">
+            {errors.email}
+          </p>
+        )}
+      </div>
+    </fieldset>
+  );
+}
 
-                  {/* helper link moved to bottom of screen */}
-                </div>
-              </div>
-            </div>
+export default function SecretSantaApp() {
+  const remote = useExchange();
+  const participants = remote.exchange?.participants ?? [];
+  const listName = remote.exchange?.listName ?? "";
+  const giftAmount = remote.exchange?.giftAmount;
+  const readOnly = remote.exchange?.status === "drawn";
+  const [setupStarted, setSetupStarted] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [newParticipant, setNewParticipant] =
+    useState(emptyParticipant);
+  const [participantDraft, setParticipantDraft] =
+    useState(emptyParticipant);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const [showEditList, setShowEditList] = useState(false);
+  const [listNameDraft, setListNameDraft] = useState(listName);
+  const [giftAmountDraft, setGiftAmountDraft] = useState(
+    giftAmount?.toString() ?? "",
+  );
+  const [listErrors, setListErrors] = useState<{
+    name?: string;
+    amount?: string;
+  }>({});
+  const [assignStatus, setAssignStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [assignError, setAssignError] = useState("");
+  const participantEditTrigger = useRef<HTMLButtonElement>(null);
+  const listEditTrigger = useRef<HTMLButtonElement>(null);
+  const listNameRef = useRef<HTMLInputElement>(null);
+  const listAmountRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const atWelcome =
+    !remote.exchange &&
+    !setupStarted &&
+    !remote.loadError &&
+    assignStatus === "idle";
 
-            {/* StepFlow overlay — only mount StepFlow when visible to avoid hidden-input focus */}
-            {flowStarted && !flowComplete ? (
-              <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100 z-20">
-                <div className="w-full h-full flex items-center justify-center px-1 sm:px-2 py-3">
-                  <div className="w-full">
-                    <StepFlow
-                      initialName={listName}
-                      initialAmount={giftAmount}
-                      autoFocus={false}
-                      onCancel={() => {
-                        setFlowStarted(false);
-                      }}
-                      onComplete={(name, amount) => {
-                        setListName(name);
-                        setGiftAmount(amount ?? undefined);
-                        setFlowComplete(true);
-                        setFlowStarted(false);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
+  function saveParticipant(form: HTMLFormElement, id: string | null) {
+    if (remote.busy) return;
+    const draft = id ? participantDraft : newParticipant;
+    const name = draft.name.trim();
+    const email = draft.email.trim();
+    const errors: ParticipantDraft["errors"] = {};
+    if (!name) errors.name = "Por favor, ingresa un nombre.";
+    if (!email)
+      errors.email = "Por favor, ingresa un correo electrónico.";
+    else if (!validateEmail(email))
+      errors.email = "Por favor, ingresa un correo electrónico válido.";
+    if (
+      participants.some(
+        (person) =>
+          person.id !== id &&
+          person.email.toLowerCase() === email.toLowerCase(),
+      )
+    )
+      errors.email = "Este correo electrónico ya está registrado.";
+    if (!id && participants.length >= 50)
+      errors.name = "Se permiten hasta 50 participantes.";
+
+    const { elements } = form;
+    const nameInput = elements.namedItem("name") as HTMLInputElement;
+    const emailInput = elements.namedItem("email") as HTMLInputElement;
+    if (errors.name || errors.email) {
+      const setDraft = id ? setParticipantDraft : setNewParticipant;
+      setDraft({ ...draft, errors });
+      (errors.name ? nameInput : emailInput).focus();
+      return;
+    }
+
+    const next = id
+      ? participants.map((person) =>
+          person.id === id ? { ...person, name, email } : person,
+        )
+      : [...participants, { id: uuidv4(), name, email }];
+    if (remote.save({ participants: next, listName, giftAmount })) {
+      setAnnouncement(`${name} ${id ? "actualizado" : "agregado"}.`);
+      if (id) setEditingId(null);
+      else {
+        setNewParticipant(emptyParticipant);
+        nameInput.focus();
+      }
+    }
+  }
+
+  async function handleAssign(retry: "failed" | "unknown" | null = null) {
+    if (remote.busy || participants.length < 3) return;
+    setAssignError("");
+    setAssignStatus("loading");
+    try {
+      await remote.draw(retry);
+      setAssignStatus("success");
+    } catch (failure) {
+      setAssignError(
+        failure instanceof Error
+          ? failure.message
+          : "No se pudieron enviar los correos. Intenta nuevamente.",
+      );
+      setAssignStatus("error");
+    }
+  }
+
+  function resetApp() {
+    setSetupStarted(false);
+    setReviewing(false);
+    setShowEditList(false);
+    setEditingId(null);
+    setNewParticipant(emptyParticipant);
+  }
+
+  const roster = (
+    <ul aria-label="Lista de participantes" className="divide-y divide-border">
+      {participants.map((person) => (
+        <li
+          key={person.id}
+          className="participant-enter flex items-center justify-between gap-2 py-4"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="break-words font-medium">{person.name}</p>
+            <p className="break-all text-sm text-muted-foreground">
+              {person.email}
+            </p>
           </div>
-          {flowComplete && (
-            <div className="w-full max-w-2xl mx-auto p-2 space-y-4">
-              {/* Card: List info (minimal) */}
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-9 w-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-                    <Gift />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-lg font-semibold truncate">{listName || "Sin nombre de lista"}</div>
-                    <div className="text-xs text-muted-foreground">{giftAmount ? `Presupuesto: $${giftAmount}` : "Sin presupuesto definido"}</div>
-                  </div>
-                </div>
-                <div>
-                  <Button variant="ghost" onClick={() => setShowEditList((s) => !s)} title="Editar lista">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* list editing moved to modal */}
-
-              {/* Card: Participants */}
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                {participants.length > 0 ? (
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-medium">Participantes</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" onClick={() => setShowAddParticipant((s) => !s)} title="Agregar participante">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* modal will handle composer and list editing */}
-
-                {participants.length === 0 && !showAddParticipant ? (
-                  <div className="flex flex-col items-center py-8 gap-3 text-muted-foreground">
-                    <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
-                      <UserPlus className="h-6 w-6" />
-                    </div>
-                    <div className="text-sm font-medium">No hay participantes</div>
-                    <Button
-                      onClick={() => setShowAddParticipant(true)}
-                      variant="ghost"
-                      className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
-                      aria-label="Agregar participante"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {participants.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between p-2 rounded-md border border-gray-100">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-700">
-                            {p.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium truncate">{p.name}</div>
-                            <div className="text-xs text-muted-foreground truncate">{p.email}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" onClick={() => handleEditParticipant(p.id)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" onClick={() => removeParticipant(p.id)}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Card: Finalize (minimal) */}
-              <div className="bg-white/95 rounded-xl shadow-sm p-4">
-                <div className="text-center">
-                  <Button
-                    onClick={handleAssign}
-                    disabled={participants.length < 3 || isAssigning}
-                    className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md disabled:opacity-60"
-                    aria-label="Asignar Secret Santas"
-                  >
-                    {isAssigning ? (
-                      <>
-                        <Spinner className="h-5 w-5" />
-                        <span>Asignando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Gift className="h-5 w-5" />
-                        <span>Asignar Secret Santas</span>
-                      </>
-                    )}
-                  </Button>
-
-                  <div className="mt-2 text-xs text-muted-foreground">Se necesitan al menos 3 participantes para asignar.</div>
-                </div>
-              </div>
+          {!reviewing && !readOnly && (
+            <div className="flex shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Editar participante: ${person.name}`}
+                aria-haspopup="dialog"
+                onClick={(event) => {
+                  participantEditTrigger.current = event.currentTarget;
+                  setParticipantDraft({
+                    name: person.name,
+                    email: person.email,
+                    errors: {},
+                  });
+                  setEditingId(person.id);
+                }}
+              >
+                <Pencil />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Eliminar participante: ${person.name}`}
+                className="text-muted-foreground hover:text-red-700"
+                onClick={() => {
+                  remote.save({
+                    listName,
+                    giftAmount,
+                    participants: participants.filter(
+                      (item) => item.id !== person.id,
+                    ),
+                  });
+                  setAnnouncement(`${person.name} eliminado.`);
+                }}
+              >
+                <Trash2 />
+              </Button>
             </div>
           )}
-          {/* Modals */}
-          <Modal
-            open={showAddParticipant}
-            onOpenChange={(open) => {
-              if (!open) {
-                setShowAddParticipant(false);
-                setEditingId(null);
-                setName("");
-                setEmail("");
-              } else {
-                setShowAddParticipant(true);
-              }
-            }}
-            title={editingId ? "Editar participante" : "Agregar participante"}
-            description={editingId ? "Actualiza el participante." : "Agregar un nuevo participante a la lista."}
-            footer={
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddParticipant(false);
-                    setEditingId(null);
-                    setName("");
-                    setEmail("");
-                  }}
-                  className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
-                  aria-label="Cancelar"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Cancelar</span>
-                </Button>
+        </li>
+      ))}
+    </ul>
+  );
 
-                <Button
-                  onClick={() => {
-                    addParticipant();
-                    setShowAddParticipant(false);
-                  }}
-                  className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
-                  aria-label={editingId ? "Guardar" : "Agregar"}
-                >
-                  {editingId ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-                  <span className="sr-only">{editingId ? "Guardar" : "Agregar"}</span>
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="modal-name">Nombre</Label>
-                <Input ref={nameRef} id="modal-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
-              </div>
-              <div>
-                <Label htmlFor="modal-email">Email</Label>
-                <Input id="modal-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
-              </div>
+  return (
+    <div
+      className="app-shell min-h-dvh flex flex-col bg-background text-foreground [overflow-anchor:none]"
+      onFocusCapture={settleEntranceOnFocus}
+      onAnimationEndCapture={settleEntranceOnEnd}
+    >
+      <Toaster />
+      <main
+        className={`mx-auto w-full max-w-xl flex-1 px-6 py-6 ${atWelcome || assignStatus !== "idle" ? "flex flex-col justify-center" : "sm:pt-10"}`}
+      >
+        {remote.saveError && (
+          <aside className="mb-6 border-l-2 border-red-600 bg-red-50/50 p-4">
+            <div role="alert" className="space-y-1">
+              <p className="font-medium">Hay cambios sin guardar</p>
+              <p className="text-sm text-muted-foreground">
+                {remote.saveError}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Tus cambios siguen aquí. Reintenta antes de salir o sortear.
+              </p>
             </div>
-          </Modal>
-
-          <Modal
-            open={showEditList}
-            onOpenChange={(open) => {
-              if (!open) {
-                setShowEditList(false);
-                setListNameDraft(listName);
-                setGiftAmountDraft(giftAmount ?? "");
-              } else {
-                setShowEditList(true);
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={remote.busy}
+                onClick={() => void remote.retrySave()}
+              >
+                Reintentar guardado
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={remote.busy}
+                onClick={() => void remote.discardChanges()}
+              >
+                Descartar cambios y recuperar lista guardada
+              </Button>
+            </div>
+          </aside>
+        )}
+        {remote.error && (
+          <p role="alert" className="mb-4 field-error">
+            {remote.error}
+          </p>
+        )}
+        {remote.loadError ? (
+          <section className="welcome-enter">
+            <h1 className="page-title">No pudimos recuperar tu lista</h1>
+            <p role="alert" className="mt-3 text-muted-foreground">
+              {remote.loadError}
+            </p>
+            <div className="mt-8 flex flex-col gap-2">
+              <Button onClick={() => void remote.load()}>
+                Reintentar carga
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void remote.resetSession()}
+              >
+                Volver a empezar sin recuperar la lista anterior
+              </Button>
+            </div>
+          </section>
+        ) : assignStatus !== "idle" ? (
+          <AssignLoading
+            status={assignStatus}
+            errorMessage={assignError}
+            sent={remote.exchange?.delivery.sent ?? 0}
+            total={participants.length}
+            busy={remote.busy}
+            onDone={async () => {
+              if (assignStatus === "success") {
+                if (!(await remote.finish())) {
+                  toast({
+                    title: "No se pudo cerrar la lista",
+                    description:
+                      "Pulsa Listo para reintentar. Los correos enviados no se repetirán.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                resetApp();
               }
+              setAssignStatus("idle");
             }}
-            title="Editar lista"
-            description="Cambia el nombre de la lista y el monto orientativo."
-            footer={
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowEditList(false);
-                    setListNameDraft(listName);
-                    setGiftAmountDraft(giftAmount ?? "");
-                  }}
-                  className="flex-1 py-2 border-red-600 text-red-700 hover:bg-red-50"
-                  aria-label="Cancelar"
+          />
+        ) : !remote.exchange ? (
+          <>
+            {!setupStarted && (
+              <section
+                className="welcome-screen stagger-in text-center"
+                aria-labelledby="welcome-title"
+              >
+                <BrandIllustration
+                  scene="welcome"
+                  priority
+                  className="welcome-art reveal reveal-0"
+                />
+                <h1
+                  id="welcome-title"
+                  className="welcome-title reveal reveal-1"
                 >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Cancelar</span>
-                </Button>
-
+                  Una sorpresa para compartir.
+                </h1>
+                <p className="welcome-copy reveal reveal-2 mx-auto">
+                  Sortea los nombres y envía las asignaciones por correo.
+                </p>
                 <Button
+                  className="reveal reveal-3 mt-8 w-full"
+                  disabled={remote.loading}
+                  aria-busy={remote.loading}
                   onClick={() => {
-                    setListName(listNameDraft.trim());
-                    setGiftAmount(giftAmountDraft === "" ? undefined : Number(giftAmountDraft));
-                    setShowEditList(false);
+                    setSetupStarted(true);
+                    window.scrollTo({ top: 0 });
                   }}
-                  className="flex-[2] py-2 bg-green-600 hover:bg-green-700 text-white"
-                  aria-label="Guardar"
                 >
-                  <Check className="h-5 w-5" />
-                  <span className="sr-only">Guardar</span>
+                  Empezar
                 </Button>
-              </div>
-            }
-          >
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="modal-list-name">Nombre de lista</Label>
-                <Input id="modal-list-name" value={listNameDraft} onChange={(e) => setListNameDraft(e.target.value)} placeholder="Ej: Oficina 2025" />
-              </div>
-              <div>
-                <Label htmlFor="modal-list-amount">Monto</Label>
-                <Input
-                  id="modal-list-amount"
-                  type="number"
-                  value={giftAmountDraft}
-                  onChange={(e) => setGiftAmountDraft(e.target.value)}
-                  placeholder="Ej: 20"
+              </section>
+            )}
+            <section
+              hidden={!setupStarted}
+              className={setupStarted ? "welcome-enter" : undefined}
+            >
+              <Button
+                variant="ghost"
+                className="-ml-4 mb-5 font-semibold"
+                aria-label="Volver al inicio"
+                onClick={() => {
+                  setSetupStarted(false);
+                  window.scrollTo({ top: 0 });
+                }}
+              >
+                <ArrowLeft aria-hidden />
+                Volver
+              </Button>
+              <div className="mb-8 flex items-center justify-between gap-4">
+                <h1 className="page-title">Prepara el sorteo.</h1>
+                <BrandIllustration
+                  scene="gift"
+                  className="h-20 w-20 shrink-0"
                 />
               </div>
-            </div>
-          </Modal>
-
-          {/* Fixed bottom help link (animated with CTA) */}
-          <div
-            className={`fixed left-0 right-0 bottom-4 flex justify-center z-40 transition-all duration-400 ease-out ${
-              ctaVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
-            }`}
-            style={{ transitionDelay: ctaVisible ? "880ms" : "0ms" }}
+              <ExchangeDetailsForm
+                disabled={remote.loading}
+                onComplete={(nextName, amount) => {
+                  if (
+                    remote.save({
+                      listName: nextName,
+                      giftAmount: amount,
+                      participants: [],
+                    })
+                  ) {
+                    resetApp();
+                    window.scrollTo({ top: 0 });
+                  }
+                }}
+              />
+            </section>
+          </>
+        ) : (
+          <fieldset
+            key={reviewing && !readOnly ? "review" : "participants"}
+            aria-label="Sorteo"
+            aria-busy={remote.saving}
+            disabled={remote.busy || remote.loading}
+            className="welcome-enter min-w-0"
           >
-            <Link
-              href="/help"
-              aria-label="Cómo funciona (ayuda)"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:underline"
-            >
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-              <span>Cómo funciona</span>
-            </Link>
-          </div>
-        </div>
+            {reviewing && !readOnly ? (
+              <>
+                <Button
+                  variant="ghost"
+                  className="-ml-4 mb-5"
+                  onClick={() => {
+                    setReviewing(false);
+                    window.scrollTo({ top: 0 });
+                  }}
+                >
+                  Volver a participantes
+                </Button>
+                <h1 className="page-title">Revisa el sorteo.</h1>
+                <p className="mt-3 text-muted-foreground">
+                  Revisa los correos. Al sortear, enviaremos las asignaciones.
+                </p>
+                <div className="mt-8 border-y border-border py-5">
+                  <h2 className="font-medium">{listName}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatBudget(giftAmount)}
+                  </p>
+                </div>
+                <h2 className="mt-6 text-sm font-medium">
+                  {participants.length} participantes
+                </h2>
+                {roster}
+                <div className="action-dock sticky bottom-0 -mx-6 mt-6 border-t border-border bg-background px-6 py-3">
+                  <Button
+                    className="reveal action-reveal w-full"
+                    disabled={participants.length < 3 || !!remote.saveError}
+                    onClick={() => void handleAssign()}
+                  >
+                    Sortear y enviar correos
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3 border-b border-border pb-6">
+                  <div className="min-w-0">
+                    <h1 className="page-title break-words">{listName}</h1>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {formatBudget(giftAmount)}
+                    </p>
+                  </div>
+                  <Button
+                    ref={listEditTrigger}
+                    variant="ghost"
+                    disabled={readOnly}
+                    aria-label="Editar lista"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setListNameDraft(listName);
+                      setGiftAmountDraft(giftAmount?.toString() ?? "");
+                      setListErrors({});
+                      setShowEditList(true);
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </div>
+                <div className="mt-7 mb-6">
+                  <h2 className="flex items-baseline gap-2 text-lg font-semibold">
+                    Participantes{" "}
+                    <span
+                      aria-label={`${participants.length} participantes`}
+                      className="text-sm font-normal text-muted-foreground"
+                    >
+                      {participants.length}
+                    </span>
+                  </h2>
+                  {!readOnly && (
+                    <p
+                      className="mt-2 text-sm text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      {participants.length >= 3
+                        ? "Todo listo para sortear."
+                        : participants.length === 2
+                          ? "Falta 1 persona."
+                          : `Agrega ${3 - participants.length} personas más.`}
+                    </p>
+                  )}
+                </div>
+                {!readOnly && (
+                  <form
+                    aria-label="Agregar participante"
+                    noValidate
+                    className="mb-5"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveParticipant(event.currentTarget, null);
+                    }}
+                  >
+                    <ParticipantFields
+                      draft={newParticipant}
+                      onChange={setNewParticipant}
+                      disabled={remote.busy}
+                      className="stagger-fields space-y-4"
+                    />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      className="reveal participant-submit mt-5 w-full"
+                      disabled={remote.busy || participants.length >= 50}
+                    >
+                      Agregar participante
+                    </Button>
+                  </form>
+                )}
+                <p className="sr-only" role="status">
+                  {announcement}
+                </p>
+                {participants.length > 0 && (
+                  <div className="border-t border-border">{roster}</div>
+                )}
+                {readOnly ? (
+                  <section className="mt-8 space-y-4 border-t border-border pt-6">
+                    <h2 className="text-lg font-semibold">Estado del envío</h2>
+                    <p role="status" className="text-muted-foreground">
+                      {remote.exchange.delivery.sent} de {participants.length}{" "}
+                      correos enviados. Las asignaciones no cambiarán.
+                    </p>
+                    <Button
+                      className="w-full"
+                      disabled={!!remote.saveError}
+                      onClick={() => void handleAssign()}
+                    >
+                      Continuar envío de correos
+                    </Button>
+                    {!!remote.exchange.delivery.failed && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => void handleAssign("failed")}
+                      >
+                        Reintentar correos fallidos
+                      </Button>
+                    )}
+                    {!!remote.exchange.delivery.unknown && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          No pudimos confirmar algunos envíos. Reenviarlos puede
+                          duplicar esos correos, siempre con la misma
+                          asignación.
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => void handleAssign("unknown")}
+                        >
+                          Reenviar correos sin confirmación
+                        </Button>
+                      </div>
+                    )}
+                    {!!remote.exchange.delivery.sending && (
+                      <Button
+                        variant="outline"
+                        onClick={() => void remote.load()}
+                      >
+                        Actualizar estado de envíos
+                      </Button>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Puedes cerrar este sorteo y crear otro. Los correos
+                      pendientes no se enviarán; un envío en curso puede
+                      terminar.
+                    </p>
+                    <Button
+                      variant="ghost"
+                      onClick={async () => {
+                        if (await remote.finish(false, true)) resetApp();
+                      }}
+                    >
+                      Cerrar sorteo sin enviar los pendientes
+                    </Button>
+                  </section>
+                ) : (
+                  <>
+                    <div className="action-dock sticky bottom-0 -mx-6 mt-6 border-t border-border bg-background px-6 py-3">
+                      <Button
+                        className="reveal action-reveal w-full"
+                        disabled={participants.length < 3 || !!remote.saveError}
+                        onClick={() => {
+                          setReviewing(true);
+                          window.scrollTo({ top: 0 });
+                        }}
+                      >
+                        Revisar sorteo
+                      </Button>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="mx-auto mt-3 flex text-muted-foreground"
+                      onClick={async () => {
+                        if (await remote.finish(true)) resetApp();
+                      }}
+                    >
+                      Descartar lista
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </fieldset>
+        )}
+      </main>
+      {!reviewing && !readOnly && assignStatus === "idle" && (
+        <footer className="mx-auto w-full max-w-xl shrink-0 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
+          <Link
+            href="/help"
+            aria-label="¿Cómo funciona? (ayuda)"
+            className="inline-flex min-h-12 items-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            ¿Cómo funciona?
+          </Link>
+        </footer>
       )}
-    </>
+      <EditDrawer
+        open={!!editingId}
+        onClose={() => setEditingId(null)}
+        triggerRef={participantEditTrigger}
+        title="Editar participante"
+        busy={remote.busy}
+        onSubmit={(form) => {
+          if (editingId) saveParticipant(form, editingId);
+        }}
+      >
+        <ParticipantFields
+          draft={participantDraft}
+          onChange={setParticipantDraft}
+          disabled={remote.busy}
+        />
+      </EditDrawer>
+      <EditDrawer
+        open={showEditList}
+        onClose={() => setShowEditList(false)}
+        triggerRef={listEditTrigger}
+        title="Editar lista"
+        busy={remote.busy}
+        onSubmit={() => {
+          const amount =
+            giftAmountDraft === "" ? undefined : Number(giftAmountDraft);
+          const errors = validateListDetails(listNameDraft, amount);
+          setListErrors(errors);
+          if (errors.name || errors.amount) {
+            (errors.name ? listNameRef : listAmountRef).current?.focus();
+            return;
+          }
+          if (
+            remote.save({
+              listName: listNameDraft.trim(),
+              giftAmount: amount,
+              participants,
+            })
+          )
+            setShowEditList(false);
+        }}
+      >
+        <fieldset disabled={remote.busy} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="edit-list-name">Nombre de lista</Label>
+            <Input
+              ref={listNameRef}
+              id="edit-list-name"
+              maxLength={120}
+              value={listNameDraft}
+              onChange={(event) => {
+                setListNameDraft(event.target.value);
+                setListErrors((errors) => ({ ...errors, name: undefined }));
+              }}
+              aria-invalid={!!listErrors.name}
+              aria-describedby={listErrors.name ? "list-name-error" : undefined}
+            />
+            {listErrors.name && (
+              <p id="list-name-error" role="alert" className="field-error">
+                {listErrors.name}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-list-amount">Monto</Label>
+            <Input
+              ref={listAmountRef}
+              id="edit-list-amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              max="9999999999.99"
+              value={giftAmountDraft}
+              onChange={(event) => {
+                setGiftAmountDraft(event.target.value);
+                setListErrors((errors) => ({ ...errors, amount: undefined }));
+              }}
+              aria-invalid={!!listErrors.amount}
+              aria-describedby={
+                listErrors.amount ? "list-amount-error" : undefined
+              }
+            />
+            <p className="text-sm text-muted-foreground">
+              Por regalo, en pesos argentinos (ARS). Opcional.
+            </p>
+            {listErrors.amount && (
+              <p id="list-amount-error" role="alert" className="field-error">
+                {listErrors.amount}
+              </p>
+            )}
+          </div>
+        </fieldset>
+      </EditDrawer>
+    </div>
   );
 }

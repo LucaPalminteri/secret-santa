@@ -1,0 +1,15 @@
+{
+  "paper": "#FFF9EF",
+  "surface": "#FFFFFF",
+  "ink": "#243D32",
+  "muted": "#59685E",
+  "pine": "#2F5D46",
+  "pineStrong": "#244A37",
+  "cranberry": "#B43D3D",
+  "cranberryStrong": "#963030",
+  "sage": "#E5EEDF",
+  "gold": "#E7BA61",
+  "line": "#CBD7C9",
+  "controlLine": "#7C8C80",
+  "error": "#A82D35"
+}

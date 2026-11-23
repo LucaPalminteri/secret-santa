@@ -1,71 +1,8 @@
+@import "./brand-tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-/* Prevent accidental horizontal scroll introduced by large decorative elements */
-html,
-body {
-  overflow-x: hidden;
-}
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
-}
 
 @layer base {
   * {
@@ -73,43 +10,183 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-nunito-sans), Arial, Helvetica, sans-serif;
   }
 }
 
-/* Keep the welcome content visible from the first paint, with a short entrance. */
-@keyframes welcomeEnter {
-  from { opacity: 0.85; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+.page-title {
+  font-size: clamp(1.625rem, 5vw, 1.875rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.field-error {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--brand-error);
+}
+.reveal,
+.welcome-enter > :not(.action-dock):not(form),
+.stagger-fields > * {
+  animation: stepEnter 760ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+.welcome-screen > .reveal {
+  animation-duration: 900ms;
+}
+.reveal-0 {
+  --reveal-delay: 0ms;
+}
+.reveal-1,
+.welcome-enter > :nth-child(2) {
+  --reveal-delay: 180ms;
+}
+.reveal-2,
+.welcome-enter > :nth-child(3) {
+  --reveal-delay: 360ms;
+}
+.reveal-3,
+.welcome-enter > :nth-child(n + 4) {
+  --reveal-delay: 540ms;
+}
+.stagger-fields > :nth-child(1) {
+  --reveal-delay: 200ms;
+}
+.stagger-fields > :nth-child(2) {
+  --reveal-delay: 380ms;
+}
+.stagger-fields > :nth-child(n + 3) {
+  --reveal-delay: 560ms;
+}
+/* Focus and completed entrances settle permanently until that element unmounts. */
+[data-entrance-complete="true"] {
+  animation: none !important;
+}
+.participant-submit {
+  --reveal-delay: 560ms;
+}
+.action-reveal {
+  --reveal-delay: 700ms;
+  animation-name: appEnter;
+}
+.reveal:disabled {
+  --reveal-opacity: 0.5;
+}
+.participant-enter {
+  animation: participantEnter 170ms ease-out;
 }
 
-.welcome-enter {
-  animation: welcomeEnter 240ms ease-out both;
+.dialog-backdrop {
+  animation: appEnter 180ms ease-out both;
+}
+.dialog-panel {
+  animation: stepEnter 240ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.welcome-title {
+  font-size: clamp(2rem, 8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.welcome-art {
+  width: 100%;
+  height: clamp(170px, 31dvh, 250px);
+  object-fit: contain;
+  margin: 1rem auto 1.25rem;
+}
+.welcome-copy {
+  max-width: 25rem;
+  margin-top: 1rem;
+  color: var(--brand-muted);
+  line-height: 1.5;
+}
+.action-dock {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .welcome-enter { animation: none; }
+@keyframes appEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--reveal-opacity, 1);
+  }
 }
-
-/* Message fade used in AssignLoading for rotating messages */
-@keyframes msgFadeIn {
-  0% {
+@keyframes stepEnter {
+  from {
     opacity: 0;
     transform: translateY(6px);
   }
-  100% {
+  to {
+    opacity: var(--reveal-opacity, 1);
+    transform: translateY(0);
+  }
+}
+@keyframes participantEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.msg-fade {
-  animation: msgFadeIn 420ms cubic-bezier(0.22, 0.9, 0.36, 1) both;
+@media (max-height: 650px) {
+  .welcome-art {
+    height: 160px;
+    margin: 0 auto 0.75rem;
+  }
+  .welcome-title {
+    font-size: 1.875rem;
+  }
+  .welcome-copy {
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .welcome-screen > button {
+    margin-top: 1.25rem;
+  }
+  .welcome-screen > p:last-child {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+  }
 }
-
+.delivery-scene {
+  display: block;
+  width: 224px;
+  height: 160px;
+  overflow: visible;
+}
+.assignment-art {
+  width: 224px;
+  height: clamp(112px, 20dvh, 144px);
+  object-fit: contain;
+}
+.delivery-progress {
+  width: min(100%, 280px);
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--brand-sage);
+}
+.delivery-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand-pine);
+  transition: width 280ms ease-out;
+}
 @media (prefers-reduced-motion: reduce) {
-  .msg-fade {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
+  .reveal,
+  .welcome-enter > :not(.action-dock):not(form),
+  .stagger-fields > *,
+  .dialog-backdrop,
+  .dialog-panel,
+  .participant-enter {
+    animation: none;
+  }
+  .delivery-progress-fill {
+    transition: none;
   }
 }
